@@ -1,0 +1,24 @@
+# WordPress
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs-notifish/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+

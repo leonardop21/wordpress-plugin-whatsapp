@@ -1,0 +1,17 @@
+# Deny directory listing
+Options -Indexes
+
+# Prevent direct access to sensitive files
+<FilesMatch "^(\.htaccess|\.htpasswd|\.git|\.svn|\.env|composer\.json|composer\.lock|package\.json|package-lock\.json|README\.md|LICENSE|\.gitignore)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order deny,allow
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Note: PHP files are protected by ABSPATH check in each file
+# WordPress will load them through its plugin system, but direct URL access is prevented
+

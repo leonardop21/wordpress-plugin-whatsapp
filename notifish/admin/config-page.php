@@ -1,5 +1,25 @@
+<?php
+/**
+ * Config page view
+ *
+ * @package Notifish
+ * @since 2.0.0
+ */
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+?>
 <div class="wrap">
     <h1>Configurações do Notifish</h1>
+    
+    <?php
+    // Verifica se as configurações foram salvas
+    if (isset($_GET['settings-updated']) && $_GET['settings-updated'] == 'true') {
+        echo '<div class="notice notice-success is-dismissible"><p><strong>Configurações salvas com sucesso!</strong></p></div>';
+    }
+    ?>
+    
     <form method="post" action="options.php">
         <?php
         settings_fields('notifish_group');
@@ -8,18 +28,94 @@
         ?>
         <table class="form-table">
             <tr valign="top">
+            <div style="position: relative; display: inline-block; width: 100%;">
                 <th scope="row">URL da API</th>
-                <td><input type="text" name="notifish_options[api_url]" value="<?php echo isset($options['api_url']) ? esc_attr($options['api_url']) : ''; ?>" /></td>
-            </tr>
-            <tr valign="top">
-                <th scope="row">API Key</th>
-                <td><input type="password" name="notifish_options[api_key]" value="<?php echo isset($options['api_key']) && !empty($options['api_key']) ? '***************************' : ''; ?>" /></td>
+                <td>
+                    <input type="text" name="notifish_options[api_url]" value="<?php echo isset($options['api_url']) ? esc_attr($options['api_url']) : ''; ?>" style="width: 100%; padding-right: 40px;" />
+                    <p class="description"><strong>Importante:</strong> A URL da API deve incluir a versão (ex: https://meu-dominio.notifish.com/api/v1/ ou https://meu-dominio.notifish.com/api/v2/).</p>
+                </td>
+            </div>
             </tr>
             <tr valign="top">
                 <th scope="row">Uuid da instância</th>
-                <td><input type="password" name="notifish_options[instance_uuid]" value="<?php echo isset($options['instance_uuid']) ? esc_attr($options['instance_uuid']) : ''; ?>" /></td>
+                <td>
+                    <div style="position: relative; display: inline-block; width: 100%;">
+                        <input type="password" id="instance_uuid" name="notifish_options[instance_uuid]" value="<?php echo isset($options['instance_uuid']) ? esc_attr($options['instance_uuid']) : ''; ?>" style="width: 100%; padding-right: 40px;" />
+                        <button type="button" onclick="togglePassword('instance_uuid')" style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 16px;">👁️</button>
+                    </div>
+                </td>
+            </tr>
+            <tr valign="top">
+                <th scope="row">API Key</th>
+                <td>
+                    <div style="position: relative; display: inline-block; width: 100%;">
+                        <?php 
+                        // Se já existe uma API Key salva, mostra asteriscos, senão campo vazio
+                        $api_key_display = (isset($options['api_key']) && !empty($options['api_key'])) ? '***************************' : '';
+                        ?>
+                        <input type="password" id="api_key" name="notifish_options[api_key]" value="<?php echo esc_attr($api_key_display); ?>" placeholder="Digite uma nova API Key para alterar" style="width: 100%; padding-right: 40px;" />
+                        <button type="button" onclick="togglePassword('api_key')" style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 16px;">👁️</button>
+                    </div>
+                    <p class="description">Deixe em branco ou com asteriscos para manter a chave atual. Digite uma nova chave apenas se desejar alterá-la.</p>
+                </td>
+            </tr>
+            <tr valign="top">
+                <th scope="row">Versão Notifish</th>
+                <td>
+                    <select name="notifish_options[versao_notifish]" id="versao_notifish">
+                        <option value="v1" <?php echo (isset($options['versao_notifish']) && $options['versao_notifish'] == 'v1') ? 'selected' : ''; ?>>v1</option>
+                        <option value="v2" <?php echo (isset($options['versao_notifish']) && $options['versao_notifish'] == 'v2') ? 'selected' : ''; ?>>v2</option>
+                    </select>
+                    <p class="description">Escolha a versão da API do Notifish.</p>
+                </td>
+            </tr>
+            <tr valign="top">
+                <th scope="row">Habilitar WhatsApp por padrão</th>
+                <td>
+                    <select name="notifish_options[default_whatsapp_enabled]">
+                        <option value="0" <?php echo (isset($options['default_whatsapp_enabled']) && $options['default_whatsapp_enabled'] == '0') ? 'selected' : ''; ?>>Não</option>
+                        <option value="1" <?php echo (isset($options['default_whatsapp_enabled']) && $options['default_whatsapp_enabled'] == '1') ? 'selected' : ''; ?>>Sim</option>
+                    </select>
+                    <p class="description">Se marcado como "Sim", o checkbox de compartilhar no WhatsApp virá marcado por padrão ao criar novos posts.</p>
+                </td>
+            </tr>
+            <tr valign="top">
+                <th scope="row">Habilitar Logs</th>
+                <td>
+                    <select name="notifish_options[enable_logging]">
+                        <option value="0" <?php echo (!isset($options['enable_logging']) || $options['enable_logging'] == '0') ? 'selected' : ''; ?>>Não</option>
+                        <option value="1" <?php echo (isset($options['enable_logging']) && $options['enable_logging'] == '1') ? 'selected' : ''; ?>>Sim</option>
+                    </select>
+                    <p class="description">Se desabilitado, nenhum log será gravado em <code>wp-content/logs-notifish/</code>. Os logs ajudam a diagnosticar problemas.</p>
+                </td>
+            </tr>
+            <tr valign="top">
+                <th scope="row">Remover dados ao desinstalar</th>
+                <td>
+                    <select name="notifish_options[remove_data_on_uninstall]">
+                        <option value="0" <?php echo (!isset($options['remove_data_on_uninstall']) || $options['remove_data_on_uninstall'] == '0') ? 'selected' : ''; ?>>Não</option>
+                        <option value="1" <?php echo (isset($options['remove_data_on_uninstall']) && $options['remove_data_on_uninstall'] == '1') ? 'selected' : ''; ?>>Sim</option>
+                    </select>
+                    <p class="description"><strong>Atenção:</strong> Se marcado como "Sim", ao desinstalar o plugin, a tabela de requests e os arquivos de log serão removidos permanentemente.</p>
+                </td>
             </tr>
         </table>
         <?php submit_button(); ?>
     </form>
 </div>
+
+<script>
+function togglePassword(fieldId) {
+    const field = document.getElementById(fieldId);
+    const button = field.nextElementSibling;
+    
+    if (field.type === 'password') {
+        field.type = 'text';
+        button.textContent = '🙈';
+    } else {
+        field.type = 'password';
+        button.textContent = '👁️';
+    }
+}
+
+</script>
