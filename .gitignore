@@ -55,6 +55,9 @@ wp-config.php
 # htaccess
 /.htaccess
 
+nf-funcionando
+/nf-funcionando
+
 # All plugins
 # Note: If you wish to whitelist plugins,
 # uncomment the next line
