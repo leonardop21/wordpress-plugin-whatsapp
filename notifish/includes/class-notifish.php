@@ -59,6 +59,17 @@ class Notifish {
         add_action('save_post', array($this->admin, 'handle_post_save'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
         
+        // REST API hooks - para compatibilidade com app WordPress iOS/Android
+        add_action('init', array($this, 'register_post_meta_for_rest'));
+        add_action('rest_after_insert_post', array($this, 'handle_rest_post_insert'), 10, 3);
+        
+        // Hook universal para qualquer publicação de post (REST API, XML-RPC, Cron, Admin)
+        // Prioridade 20 para executar depois do save_post padrão
+        add_action('transition_post_status', array($this, 'handle_scheduled_post_publish'), 20, 3);
+        
+        // Hook adicional para XML-RPC (app WordPress pode usar)
+        add_action('xmlrpc_publish_post', array($this, 'handle_xmlrpc_publish'), 10, 1);
+        
         // Activation hook
         register_activation_hook(NOTIFISH_PLUGIN_FILE, array($this, 'activate'));
         
@@ -102,6 +113,172 @@ class Notifish {
             'ajaxurl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('notifish_ajax_nonce')
         ));
+    }
+
+    /**
+     * Register post meta for REST API
+     * Permite que o campo notifish seja acessível via REST API (app WordPress iOS/Android)
+     *
+     * @return void
+     */
+    public function register_post_meta_for_rest() {
+        register_post_meta('post', '_notifish_meta_value_key', array(
+            'show_in_rest' => true,
+            'single' => true,
+            'type' => 'string',
+            'default' => '',
+            'auth_callback' => function() {
+                return current_user_can('edit_posts');
+            },
+            'sanitize_callback' => 'sanitize_text_field',
+        ));
+    }
+
+    /**
+     * Handle REST API post insert
+     * Aplica valor padrão e dispara mensagem para posts criados via REST API (app WordPress)
+     *
+     * @param WP_Post         $post     Post object
+     * @param WP_REST_Request $request  Request object
+     * @param bool            $creating True if creating, false if updating
+     * @return void
+     */
+    public function handle_rest_post_insert($post, $request, $creating) {
+        $this->logger->write("=== REST API: handle_rest_post_insert ===", [
+            'post_id' => $post->ID,
+            'status' => $post->post_status,
+            'creating' => $creating
+        ]);
+
+        // Se está criando um novo post, aplica o valor padrão das configurações
+        if ($creating) {
+            $existing_meta = get_post_meta($post->ID, '_notifish_meta_value_key', true);
+            
+            // Se não foi definido um valor pelo app, usa o padrão das configurações
+            if (empty($existing_meta)) {
+                $options = get_option('notifish_options');
+                $default_enabled = isset($options['default_whatsapp_enabled']) && $options['default_whatsapp_enabled'] == '1';
+                
+                if ($default_enabled) {
+                    update_post_meta($post->ID, '_notifish_meta_value_key', '1');
+                    $this->logger->write("REST API: Valor padrão aplicado (habilitado)", ['post_id' => $post->ID]);
+                }
+            }
+        }
+
+        // Verifica se deve enviar mensagem (post publicado diretamente, não agendado)
+        if ($post->post_status === 'publish') {
+            $notifish_enabled = get_post_meta($post->ID, '_notifish_meta_value_key', true);
+            
+            if ($notifish_enabled == '1') {
+                // Verifica se já foi enviado anteriormente
+                if (!$this->database->post_was_sent($post->ID)) {
+                    $this->logger->write("REST API: Disparando envio de mensagem", ['post_id' => $post->ID]);
+                    do_action('notifish_send_message', $post->ID);
+                } else {
+                    $this->logger->write("REST API: Post já foi enviado anteriormente, ignorando", ['post_id' => $post->ID]);
+                }
+            }
+        }
+    }
+
+    /**
+     * Handle post publish via transition_post_status
+     * Dispara mensagem quando um post é publicado por QUALQUER método:
+     * - Posts agendados (future -> publish) via WP-Cron
+     * - Posts via REST API (app WordPress iOS/Android)
+     * - Posts via XML-RPC
+     * - Posts via admin
+     *
+     * @param string  $new_status New post status
+     * @param string  $old_status Old post status
+     * @param WP_Post $post       Post object
+     * @return void
+     */
+    public function handle_scheduled_post_publish($new_status, $old_status, $post) {
+        // Só processa posts (não páginas ou outros tipos)
+        if ($post->post_type !== 'post') {
+            return;
+        }
+
+        // Só processa quando o novo status é 'publish' e o antigo NÃO era 'publish'
+        // Isso captura: future->publish, draft->publish, pending->publish, auto-draft->publish, etc.
+        if ($new_status !== 'publish' || $old_status === 'publish') {
+            return;
+        }
+
+        $this->logger->write("=== TRANSITION: Post publicado ===", [
+            'post_id' => $post->ID,
+            'old_status' => $old_status,
+            'new_status' => $new_status,
+            'is_rest' => defined('REST_REQUEST') && REST_REQUEST,
+            'is_xmlrpc' => defined('XMLRPC_REQUEST') && XMLRPC_REQUEST,
+            'is_cron' => defined('DOING_CRON') && DOING_CRON
+        ]);
+
+        // Verifica se já foi processado pelo handle_post_save (admin clássico)
+        // Se veio do admin com nonce, o handle_post_save já tratou
+        if (isset($_POST['notifish_meta_box_nonce']) && 
+            wp_verify_nonce($_POST['notifish_meta_box_nonce'], 'notifish_meta_box')) {
+            $this->logger->write("TRANSITION: Ignorando - já processado pelo handle_post_save", ['post_id' => $post->ID]);
+            return;
+        }
+
+        $notifish_enabled = get_post_meta($post->ID, '_notifish_meta_value_key', true);
+        
+        // Se não tem valor definido, verifica o padrão das configurações
+        if (empty($notifish_enabled)) {
+            $options = get_option('notifish_options');
+            $default_enabled = isset($options['default_whatsapp_enabled']) && $options['default_whatsapp_enabled'] == '1';
+            
+            if ($default_enabled) {
+                $notifish_enabled = '1';
+                update_post_meta($post->ID, '_notifish_meta_value_key', '1');
+                $this->logger->write("TRANSITION: Valor padrão aplicado (habilitado)", ['post_id' => $post->ID]);
+            }
+        }
+
+        if ($notifish_enabled == '1') {
+            // Verifica se já foi enviado anteriormente
+            if (!$this->database->post_was_sent($post->ID)) {
+                $this->logger->write("TRANSITION: Disparando envio de mensagem", ['post_id' => $post->ID]);
+                do_action('notifish_send_message', $post->ID);
+            } else {
+                $this->logger->write("TRANSITION: Post já foi enviado anteriormente, ignorando", ['post_id' => $post->ID]);
+            }
+        } else {
+            $this->logger->write("TRANSITION: Notifish não habilitado para este post", ['post_id' => $post->ID]);
+        }
+    }
+
+    /**
+     * Handle XML-RPC publish
+     * Dispara mensagem quando um post é publicado via XML-RPC (app WordPress antigo)
+     *
+     * @param int $post_id Post ID
+     * @return void
+     */
+    public function handle_xmlrpc_publish($post_id) {
+        $this->logger->write("=== XML-RPC: Post publicado ===", ['post_id' => $post_id]);
+        
+        // O transition_post_status já deve ter tratado, mas garantimos aqui também
+        $notifish_enabled = get_post_meta($post_id, '_notifish_meta_value_key', true);
+        
+        if (empty($notifish_enabled)) {
+            $options = get_option('notifish_options');
+            $default_enabled = isset($options['default_whatsapp_enabled']) && $options['default_whatsapp_enabled'] == '1';
+            
+            if ($default_enabled) {
+                update_post_meta($post_id, '_notifish_meta_value_key', '1');
+                $notifish_enabled = '1';
+                $this->logger->write("XML-RPC: Valor padrão aplicado", ['post_id' => $post_id]);
+            }
+        }
+        
+        if ($notifish_enabled == '1' && !$this->database->post_was_sent($post_id)) {
+            $this->logger->write("XML-RPC: Disparando envio", ['post_id' => $post_id]);
+            do_action('notifish_send_message', $post_id);
+        }
     }
 
     /**
