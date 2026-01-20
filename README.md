@@ -2,11 +2,22 @@
 
 Plugin para gerenciar notificações via API do Notifish.
 
-## Como Funciona
+<p align="center">
+  <img src="notifish/assets/screenshots/screenshot-1.png" alt="Página de Configurações" width="80%">
+</p>
+
+## 📲 Como Funciona
 
 O plugin Notifish permite enviar automaticamente notificações via WhatsApp quando você publica um post no WordPress. Ele se integra com a API do Notifish para enviar mensagens para grupos do WhatsApp.
 
-### Funcionalidades Principais
+## 📸 Screenshots
+
+| Página de Configurações | Status do WhatsApp (API v2) |
+|:-----------------------:|:---------------------------:|
+| ![Configurações](notifish/assets/screenshots/screenshot-1.png) | ![WhatsApp Status](notifish/assets/screenshots/screenshot-4.png) |
+| Configure API URL, UUID e API Key | QR Code e status da sessão |
+
+## ✨ Funcionalidades Principais
 
 1. **Envio Automático de Notificações**
    - Quando você publica um post e marca a opção "Compartilhar no WhatsApp", o plugin envia automaticamente uma mensagem para os grupos configurados
@@ -46,7 +57,7 @@ O plugin Notifish permite enviar automaticamente notificações via WhatsApp qua
    - Você pode habilitar/desabilitar os logs nas configurações
    - Os logs ajudam a diagnosticar problemas de comunicação com a API
 
-### Fluxo de Funcionamento
+## 🔄 Fluxo de Funcionamento
 
 1. **Configuração Inicial**
    - Acesse o menu "Notifish" no WordPress
@@ -87,7 +98,7 @@ O plugin Notifish permite enviar automaticamente notificações via WhatsApp qua
    - Clique no botão "Reenviar"
    - O plugin reenvia a mensagem usando os mesmos dados do post original
 
-### Estrutura do Plugin
+## 📁 Estrutura do Plugin
 
 O plugin é organizado em classes especializadas:
 
@@ -98,7 +109,7 @@ O plugin é organizado em classes especializadas:
 - **Notifish_Logger**: Sistema de logs detalhado
 - **Notifish_Ajax**: Handlers AJAX para QR Code e status do WhatsApp (v2)
 
-### Hooks Utilizados
+## 🪝 Hooks Utilizados
 
 O plugin utiliza diversos hooks do WordPress para capturar publicações de posts:
 
@@ -109,7 +120,7 @@ O plugin utiliza diversos hooks do WordPress para capturar publicações de post
 | `transition_post_status` | Captura transições de status (posts agendados, qualquer origem) |
 | `xmlrpc_publish_post` | Captura publicações via XML-RPC (apps legados) |
 
-### REST API
+## 🔌 REST API
 
 O plugin expõe o campo `_notifish_meta_value_key` via REST API:
 
@@ -142,7 +153,7 @@ Valores possíveis:
 - `"1"` = Enviar para WhatsApp
 - `""` ou ausente = Usa valor padrão das configurações
 
-### Diferenças entre API v1 e v2
+## ⚡ Diferenças entre API v1 e v2
 
 **API v1:**
 - Envia mensagens com parâmetros: `link`, `typing`, `delay`
@@ -154,7 +165,7 @@ Valores possíveis:
 - Permite visualizar QR Code, status da conexão, reiniciar e desconectar sessão
 - Suporta preview de links automaticamente
 
-### Banco de Dados
+## 🗄️ Banco de Dados
 
 O plugin cria uma tabela `wp_notifish_requests` que armazena:
 - ID do request
@@ -165,7 +176,7 @@ O plugin cria uma tabela `wp_notifish_requests` que armazena:
 - ID e nome do usuário que publicou
 - Data/hora do envio
 
-### Configurações Disponíveis
+## ⚙️ Configurações Disponíveis
 
 - **URL da API**: Endpoint da API do Notifish (deve incluir `/api/v1/` ou `/api/v2/`)
 - **UUID da Instância**: Identificador único da sua instância
@@ -175,17 +186,17 @@ O plugin cria uma tabela `wp_notifish_requests` que armazena:
 - **Habilitar Logs**: Ativa/desativa o sistema de logs detalhado
 - **Remover dados ao desinstalar**: Se marcado, remove tabela e logs ao desinstalar o plugin
 
-## Segurança
+## 🔒 Segurança
 
 Este plugin implementa várias medidas de segurança para prevenir ataques:
 
-### Proteção contra Acesso Direto
+### 🛡️ Proteção contra Acesso Direto
 - ✅ Verificação de `ABSPATH` em todos os arquivos PHP
 - ✅ Arquivos `index.php` vazios em todas as pastas para prevenir listagem de diretórios
 - ✅ Arquivo `.htaccess` para bloquear acesso direto a arquivos sensíveis
 - ✅ Verificação de `WP_UNINSTALL_PLUGIN` no arquivo de desinstalação
 
-### Proteção contra Ataques
+### 🚫 Proteção contra Ataques
 - ✅ **XSS (Cross-Site Scripting)**: Todas as saídas usam `esc_html()`, `esc_attr()`, `esc_js()`, `esc_url()`
 - ✅ **SQL Injection**: Todas as consultas usam `$wpdb->prepare()` com placeholders
 - ✅ **CSRF (Cross-Site Request Forgery)**: Nonces em todos os formulários e requisições AJAX
@@ -193,7 +204,7 @@ Este plugin implementa várias medidas de segurança para prevenir ataques:
 - ✅ **Validação de Permissões**: `current_user_can('manage_options')` em todas as páginas admin
 - ✅ **Validação de Nonce**: `wp_verify_nonce()` em todas as requisições AJAX e formulários
 
-### Estrutura de Segurança
+### 📂 Estrutura de Segurança
 ```
 notifish/
 ├── notifish.php          # Arquivo principal (protegido)
@@ -215,6 +226,12 @@ notifish/
         └── index.php    # Arquivo vazio de proteção
 ```
 
-## Licença
+## 📄 Licença
 
 GPL v2 or later
+
+---
+
+<p align="center">
+  Desenvolvido com ❤️ por <a href="https://notifish.com">Notifish</a>
+</p>

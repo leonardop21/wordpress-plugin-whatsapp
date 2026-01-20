@@ -16,6 +16,7 @@ $remove_data = isset($options['remove_data_on_uninstall']) && $options['remove_d
 
 // Sempre remove as opções
 delete_option('notifish_options');
+delete_option('notifish_credentials_notice_dismissed');
 
 // Remove dados apenas se o usuário configurou para remover
 if ($remove_data) {
