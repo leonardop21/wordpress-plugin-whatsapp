@@ -59,6 +59,13 @@ class Notifish {
         add_action('save_post', array($this->admin, 'handle_post_save'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
         
+        // REST API hooks - para compatibilidade com app WordPress iOS/Android
+        add_action('init', array($this, 'register_post_meta_for_rest'));
+        add_action('rest_after_insert_post', array($this, 'handle_rest_post_insert'), 10, 3);
+        
+        // Hook para posts agendados - dispara quando post muda de 'future' para 'publish'
+        add_action('transition_post_status', array($this, 'handle_scheduled_post_publish'), 10, 3);
+        
         // Activation hook
         register_activation_hook(NOTIFISH_PLUGIN_FILE, array($this, 'activate'));
         
@@ -102,6 +109,126 @@ class Notifish {
             'ajaxurl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('notifish_ajax_nonce')
         ));
+    }
+
+    /**
+     * Register post meta for REST API
+     * Permite que o campo notifish seja acessível via REST API (app WordPress iOS/Android)
+     *
+     * @return void
+     */
+    public function register_post_meta_for_rest() {
+        register_post_meta('post', '_notifish_meta_value_key', array(
+            'show_in_rest' => true,
+            'single' => true,
+            'type' => 'string',
+            'default' => '',
+            'auth_callback' => function() {
+                return current_user_can('edit_posts');
+            },
+            'sanitize_callback' => 'sanitize_text_field',
+        ));
+    }
+
+    /**
+     * Handle REST API post insert
+     * Aplica valor padrão e dispara mensagem para posts criados via REST API (app WordPress)
+     *
+     * @param WP_Post         $post     Post object
+     * @param WP_REST_Request $request  Request object
+     * @param bool            $creating True if creating, false if updating
+     * @return void
+     */
+    public function handle_rest_post_insert($post, $request, $creating) {
+        $this->logger->write("=== REST API: handle_rest_post_insert ===", [
+            'post_id' => $post->ID,
+            'status' => $post->post_status,
+            'creating' => $creating
+        ]);
+
+        // Se está criando um novo post, aplica o valor padrão das configurações
+        if ($creating) {
+            $existing_meta = get_post_meta($post->ID, '_notifish_meta_value_key', true);
+            
+            // Se não foi definido um valor pelo app, usa o padrão das configurações
+            if (empty($existing_meta)) {
+                $options = get_option('notifish_options');
+                $default_enabled = isset($options['default_whatsapp_enabled']) && $options['default_whatsapp_enabled'] == '1';
+                
+                if ($default_enabled) {
+                    update_post_meta($post->ID, '_notifish_meta_value_key', '1');
+                    $this->logger->write("REST API: Valor padrão aplicado (habilitado)", ['post_id' => $post->ID]);
+                }
+            }
+        }
+
+        // Verifica se deve enviar mensagem (post publicado diretamente, não agendado)
+        if ($post->post_status === 'publish') {
+            $notifish_enabled = get_post_meta($post->ID, '_notifish_meta_value_key', true);
+            
+            if ($notifish_enabled == '1') {
+                // Verifica se já foi enviado anteriormente
+                if (!$this->database->post_was_sent($post->ID)) {
+                    $this->logger->write("REST API: Disparando envio de mensagem", ['post_id' => $post->ID]);
+                    do_action('notifish_send_message', $post->ID);
+                } else {
+                    $this->logger->write("REST API: Post já foi enviado anteriormente, ignorando", ['post_id' => $post->ID]);
+                }
+            }
+        }
+    }
+
+    /**
+     * Handle scheduled post publish
+     * Dispara mensagem quando um post agendado é publicado automaticamente pelo WP-Cron
+     *
+     * @param string  $new_status New post status
+     * @param string  $old_status Old post status
+     * @param WP_Post $post       Post object
+     * @return void
+     */
+    public function handle_scheduled_post_publish($new_status, $old_status, $post) {
+        // Só processa posts (não páginas ou outros tipos)
+        if ($post->post_type !== 'post') {
+            return;
+        }
+
+        // Só processa quando muda de 'future' (agendado) para 'publish'
+        if ($old_status !== 'future' || $new_status !== 'publish') {
+            return;
+        }
+
+        $this->logger->write("=== AGENDAMENTO: Post agendado publicado ===", [
+            'post_id' => $post->ID,
+            'old_status' => $old_status,
+            'new_status' => $new_status
+        ]);
+
+        $notifish_enabled = get_post_meta($post->ID, '_notifish_meta_value_key', true);
+        
+        // Se não tem valor definido, verifica o padrão das configurações
+        if (empty($notifish_enabled)) {
+            $options = get_option('notifish_options');
+            $default_enabled = isset($options['default_whatsapp_enabled']) && $options['default_whatsapp_enabled'] == '1';
+            
+            if ($default_enabled) {
+                $notifish_enabled = '1';
+                update_post_meta($post->ID, '_notifish_meta_value_key', '1');
+                $this->logger->write("AGENDAMENTO: Valor padrão aplicado (habilitado)", ['post_id' => $post->ID]);
+            }
+        }
+
+        if ($notifish_enabled == '1') {
+            // Verifica se já foi enviado anteriormente
+            if (!$this->database->post_was_sent($post->ID)) {
+                $this->logger->write("AGENDAMENTO: Disparando envio de mensagem", ['post_id' => $post->ID]);
+                do_action('notifish_send_message', $post->ID);
+            } else {
+                $this->logger->write("AGENDAMENTO: Post já foi enviado anteriormente, ignorando", ['post_id' => $post->ID]);
+            }
+        } else {
+            $this->logger->write("AGENDAMENTO: Notifish não habilitado para este post", ['post_id' => $post->ID]);
+        }
     }
 
     /**

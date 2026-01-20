@@ -168,12 +168,21 @@ class Notifish_Admin {
     }
 
     /**
-     * Handle post save
+     * Handle post save (editor clássico/Gutenberg via admin)
+     * 
+     * NOTA: Este método só processa salvamentos via admin (com nonce).
+     * Posts via REST API (app WordPress) são processados em handle_rest_post_insert().
+     * Posts agendados são processados em handle_scheduled_post_publish().
      *
      * @param int $post_id Post ID
      * @return void
      */
     public function handle_post_save($post_id) {
+        // Ignora se é uma requisição REST API (será tratada por handle_rest_post_insert)
+        if (defined('REST_REQUEST') && REST_REQUEST) {
+            return;
+        }
+
         if (!isset($_POST['notifish_meta_box_nonce'])) {
             return;
         }
@@ -197,6 +206,7 @@ class Notifish_Admin {
         
         // Verifica se o post já foi enviado antes de disparar o envio
         // Se já foi enviado, não reenvia automaticamente (só pelo menu Notifish Logs)
+        // NOTA: Posts agendados (status 'future') serão processados quando publicados via transition_post_status
         if ($status === 'publish' && $my_data == '1') {
             // Verifica se o post já foi enviado anteriormente
             if (!$this->database->post_was_sent($post_id)) {
