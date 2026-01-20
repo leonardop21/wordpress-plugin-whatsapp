@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Notifish
- * Plugin URI: https://notifish.com
+ * Plugin URI: https://notifish.com/lp/plugin-whatsapp-wordpress
  * Description: Plugin para gerenciar notificações via API do Notifish.
  * Version: 2.0.0
  * Author: Notifish
@@ -9,7 +9,6 @@
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: notifish
- * Domain Path: /languages
  */
 
 if (!defined('ABSPATH')) {

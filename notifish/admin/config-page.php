@@ -15,8 +15,41 @@ if (!defined('ABSPATH')) {
     
     <?php
     // Verifica se as configurações foram salvas
-    if (isset($_GET['settings-updated']) && $_GET['settings-updated'] == 'true') {
+    if (isset($_GET['settings-updated']) && sanitize_text_field(wp_unslash($_GET['settings-updated'])) === 'true') {
         echo '<div class="notice notice-success is-dismissible"><p><strong>Configurações salvas com sucesso!</strong></p></div>';
+    }
+    
+    // Notice para obter credenciais - dismissível
+    $notice_dismissed = get_option('notifish_credentials_notice_dismissed', false);
+    if (!$notice_dismissed) {
+        // Monta a URL com UTM parameters
+        $site_url = urlencode(get_site_url());
+        $notifish_url = 'https://notifish.com/?utm_source=wordpress_plugin&utm_medium=admin_notice&utm_campaign=get_credentials&utm_content=' . $site_url;
+        ?>
+        <div class="notice notice-info is-dismissible notifish-credentials-notice">
+            <p>
+                <strong>🔑 Não tem as credenciais?</strong> 
+                Obtenha sua API Key e UUID da instância em 
+                <a href="<?php echo esc_url($notifish_url); ?>" target="_blank" rel="noopener noreferrer">
+                    <strong>notifish.com</strong>
+                </a>
+            </p>
+        </div>
+        <script>
+        jQuery(document).ready(function($) {
+            $('.notifish-credentials-notice').on('click', '.notice-dismiss', function() {
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'notifish_dismiss_credentials_notice',
+                        nonce: '<?php echo esc_js(wp_create_nonce('notifish_dismiss_notice')); ?>'
+                    }
+                });
+            });
+        });
+        </script>
+        <?php
     }
     ?>
     
@@ -31,7 +64,7 @@ if (!defined('ABSPATH')) {
             <div style="position: relative; display: inline-block; width: 100%;">
                 <th scope="row">URL da API</th>
                 <td>
-                    <input type="text" name="notifish_options[api_url]" value="<?php echo isset($options['api_url']) ? esc_attr($options['api_url']) : ''; ?>" style="width: 100%; padding-right: 40px;" />
+                    <input type="text" id="api_url" name="notifish_options[api_url]" value="<?php echo isset($options['api_url']) ? esc_attr($options['api_url']) : ''; ?>" style="width: 100%; padding-right: 40px;" />
                     <p class="description"><strong>Importante:</strong> A URL da API deve incluir a versão (ex: https://meu-dominio.notifish.com/api/v1/ ou https://meu-dominio.notifish.com/api/v2/).</p>
                 </td>
             </div>
@@ -57,16 +90,6 @@ if (!defined('ABSPATH')) {
                         <button type="button" onclick="togglePassword('api_key')" style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 16px;">👁️</button>
                     </div>
                     <p class="description">Deixe em branco ou com asteriscos para manter a chave atual. Digite uma nova chave apenas se desejar alterá-la.</p>
-                </td>
-            </tr>
-            <tr valign="top">
-                <th scope="row">Versão Notifish</th>
-                <td>
-                    <select name="notifish_options[versao_notifish]" id="versao_notifish">
-                        <option value="v1" <?php echo (isset($options['versao_notifish']) && $options['versao_notifish'] == 'v1') ? 'selected' : ''; ?>>v1</option>
-                        <option value="v2" <?php echo (isset($options['versao_notifish']) && $options['versao_notifish'] == 'v2') ? 'selected' : ''; ?>>v2</option>
-                    </select>
-                    <p class="description">Escolha a versão da API do Notifish.</p>
                 </td>
             </tr>
             <tr valign="top">
@@ -117,5 +140,4 @@ function togglePassword(fieldId) {
         button.textContent = '👁️';
     }
 }
-
 </script>

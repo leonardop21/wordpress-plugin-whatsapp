@@ -46,9 +46,8 @@ class Notifish_Admin {
             array($this, 'render_requests_page')
         );
         
-        $options = get_option('notifish_options');
-        $versao = isset($options['versao_notifish']) ? $options['versao_notifish'] : 'v1';
-        if ($versao === 'v2') {
+        // Menu WhatsApp Status só aparece para API v2
+        if (Notifish::detect_api_version() === 'v2') {
             add_submenu_page(
                 'notifish',
                 'WhatsApp Status',
@@ -187,7 +186,8 @@ class Notifish_Admin {
             return;
         }
         
-        if (!wp_verify_nonce($_POST['notifish_meta_box_nonce'], 'notifish_meta_box')) {
+        $nonce = sanitize_text_field(wp_unslash($_POST['notifish_meta_box_nonce']));
+        if (!wp_verify_nonce($nonce, 'notifish_meta_box')) {
             return;
         }
         
@@ -199,7 +199,7 @@ class Notifish_Admin {
             return;
         }
 
-        $my_data = isset($_POST['notifish_send_notification_whatsapp']) ? sanitize_text_field($_POST['notifish_send_notification_whatsapp']) : '';
+        $my_data = isset($_POST['notifish_send_notification_whatsapp']) ? sanitize_text_field(wp_unslash($_POST['notifish_send_notification_whatsapp'])) : '';
         update_post_meta($post_id, '_notifish_meta_value_key', $my_data);
 
         $status = get_post_status($post_id);
@@ -258,11 +258,11 @@ class Notifish_Admin {
         }
         
         $this->options = get_option('notifish_options');
-        $versao = isset($this->options['versao_notifish']) ? $this->options['versao_notifish'] : 'v1';
+        $versao = Notifish::detect_api_version();
         
         if ($versao !== 'v2') {
             echo '<div class="wrap"><h1>WhatsApp Status</h1>';
-            echo '<div class="notice notice-error"><p>Esta funcionalidade está disponível apenas quando a versão está configurada como v2.</p></div>';
+            echo '<div class="notice notice-error"><p>Esta funcionalidade está disponível apenas para API v2. Verifique se a URL da API contém /v2/.</p></div>';
             echo '</div>';
             return;
         }
@@ -278,8 +278,7 @@ class Notifish_Admin {
      * @return void
      */
     public function handle_resend_message($request) {
-        $this->options = get_option('notifish_options');
-        $versao = isset($this->options['versao_notifish']) ? $this->options['versao_notifish'] : 'v1';
+        $versao = Notifish::detect_api_version();
         
         if ($versao === 'v2') {
             $this->api->resend_message_v2($request);

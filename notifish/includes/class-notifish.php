@@ -78,6 +78,7 @@ class Notifish {
         add_action('wp_ajax_notifish_get_session_status', array($this->ajax, 'get_session_status'));
         add_action('wp_ajax_notifish_restart_session', array($this->ajax, 'restart_session'));
         add_action('wp_ajax_notifish_logout_session', array($this->ajax, 'logout_session'));
+        add_action('wp_ajax_notifish_dismiss_credentials_notice', array($this->ajax, 'dismiss_credentials_notice'));
         
         // Custom action hooks
         add_action('notifish_send_message', array($this, 'send_message'), 10, 1);
@@ -218,10 +219,12 @@ class Notifish {
 
         // Verifica se já foi processado pelo handle_post_save (admin clássico)
         // Se veio do admin com nonce, o handle_post_save já tratou
-        if (isset($_POST['notifish_meta_box_nonce']) && 
-            wp_verify_nonce($_POST['notifish_meta_box_nonce'], 'notifish_meta_box')) {
-            $this->logger->write("TRANSITION: Ignorando - já processado pelo handle_post_save", ['post_id' => $post->ID]);
-            return;
+        if (isset($_POST['notifish_meta_box_nonce'])) {
+            $nonce = sanitize_text_field(wp_unslash($_POST['notifish_meta_box_nonce']));
+            if (wp_verify_nonce($nonce, 'notifish_meta_box')) {
+                $this->logger->write("TRANSITION: Ignorando - já processado pelo handle_post_save", ['post_id' => $post->ID]);
+                return;
+            }
         }
 
         $notifish_enabled = get_post_meta($post->ID, '_notifish_meta_value_key', true);
@@ -282,6 +285,32 @@ class Notifish {
     }
 
     /**
+     * Detect API version from URL
+     * Extrai a versão da API a partir da URL (ex: /v1/ ou /v2/)
+     *
+     * @param string|null $api_url URL da API (se null, busca das opções)
+     * @return string Versão detectada ('v1' ou 'v2'), padrão 'v1'
+     */
+    public static function detect_api_version($api_url = null) {
+        if ($api_url === null) {
+            $options = get_option('notifish_options');
+            $api_url = isset($options['api_url']) ? $options['api_url'] : '';
+        }
+        
+        if (preg_match('/\/v(\d+)\/?/', $api_url, $matches)) {
+            return 'v' . $matches[1];
+        }
+        
+        // Fallback: verificar se existe versao_notifish salva (migração de versões anteriores)
+        $options = get_option('notifish_options');
+        if (isset($options['versao_notifish'])) {
+            return $options['versao_notifish'];
+        }
+        
+        return 'v1'; // Padrão
+    }
+
+    /**
      * Send message handler
      *
      * @param int $post_id Post ID
@@ -290,8 +319,8 @@ class Notifish {
     public function send_message($post_id) {
         $this->logger->write("=== INÍCIO: send_message ===", ['post_id' => $post_id]);
         
-        $options = get_option('notifish_options');
-        $versao = isset($options['versao_notifish']) ? $options['versao_notifish'] : 'v1';
+        $versao = self::detect_api_version();
+        $this->logger->write("Versão da API detectada: " . $versao, ['post_id' => $post_id]);
         
         if ($versao === 'v2') {
             $this->api->send_message_v2($post_id);

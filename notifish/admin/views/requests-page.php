@@ -19,8 +19,8 @@ global $wpdb;
 $table_name = $wpdb->prefix . 'notifish_requests';
 
 if (isset($_POST['resend']) && isset($_POST['_wpnonce'])) {
-    $id = intval($_POST['resend']);
-    $nonce = sanitize_text_field($_POST['_wpnonce']);
+    $id = intval(wp_unslash($_POST['resend']));
+    $nonce = sanitize_text_field(wp_unslash($_POST['_wpnonce']));
     
     if (wp_verify_nonce($nonce, 'notifish_resend_' . $id)) {
         $request = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $id));

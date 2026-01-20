@@ -20,6 +20,33 @@ class Notifish_Ajax {
     }
 
     /**
+     * Dismiss credentials notice via AJAX
+     *
+     * @return void
+     */
+    public function dismiss_credentials_notice() {
+        // Verifica permissões
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Permissão negada');
+            return;
+        }
+        
+        // Verifica nonce
+        if (!isset($_POST['nonce'])) {
+            wp_send_json_error('Nonce inválido');
+            return;
+        }
+        $nonce = sanitize_text_field(wp_unslash($_POST['nonce']));
+        if (!wp_verify_nonce($nonce, 'notifish_dismiss_notice')) {
+            wp_send_json_error('Nonce inválido');
+            return;
+        }
+        
+        update_option('notifish_credentials_notice_dismissed', true);
+        wp_send_json_success();
+    }
+
+    /**
      * Get QR code via AJAX
      *
      * @return void
@@ -31,13 +58,16 @@ class Notifish_Ajax {
             return;
         }
         
-        // Verifica nonce (opcional para compatibilidade, mas recomendado)
-        if (isset($_POST['nonce']) && !wp_verify_nonce($_POST['nonce'], 'notifish_ajax_nonce')) {
-            wp_send_json_error('Nonce inválido');
-            return;
+        // Verifica nonce
+        if (isset($_POST['nonce'])) {
+            $nonce = sanitize_text_field(wp_unslash($_POST['nonce']));
+            if (!wp_verify_nonce($nonce, 'notifish_ajax_nonce')) {
+                wp_send_json_error('Nonce inválido');
+                return;
+            }
         }
         
-        $versao = isset($this->options['versao_notifish']) ? $this->options['versao_notifish'] : 'v1';
+        $versao = Notifish::detect_api_version();
         
         if ($versao !== 'v2') {
             wp_send_json_error('API v2 não está habilitada');
@@ -161,13 +191,16 @@ class Notifish_Ajax {
             return;
         }
         
-        // Verifica nonce (opcional para compatibilidade, mas recomendado)
-        if (isset($_POST['nonce']) && !wp_verify_nonce($_POST['nonce'], 'notifish_ajax_nonce')) {
-            wp_send_json_error('Nonce inválido');
-            return;
+        // Verifica nonce
+        if (isset($_POST['nonce'])) {
+            $nonce = sanitize_text_field(wp_unslash($_POST['nonce']));
+            if (!wp_verify_nonce($nonce, 'notifish_ajax_nonce')) {
+                wp_send_json_error('Nonce inválido');
+                return;
+            }
         }
         
-        $versao = isset($this->options['versao_notifish']) ? $this->options['versao_notifish'] : 'v1';
+        $versao = Notifish::detect_api_version();
         
         if ($versao !== 'v2') {
             wp_send_json_error('API v2 não está habilitada');
@@ -249,13 +282,16 @@ class Notifish_Ajax {
             return;
         }
         
-        // Verifica nonce (opcional para compatibilidade, mas recomendado)
-        if (isset($_POST['nonce']) && !wp_verify_nonce($_POST['nonce'], 'notifish_ajax_nonce')) {
-            wp_send_json_error('Nonce inválido');
-            return;
+        // Verifica nonce
+        if (isset($_POST['nonce'])) {
+            $nonce = sanitize_text_field(wp_unslash($_POST['nonce']));
+            if (!wp_verify_nonce($nonce, 'notifish_ajax_nonce')) {
+                wp_send_json_error('Nonce inválido');
+                return;
+            }
         }
         
-        $versao = isset($this->options['versao_notifish']) ? $this->options['versao_notifish'] : 'v1';
+        $versao = Notifish::detect_api_version();
         
         if ($versao !== 'v2') {
             wp_send_json_error('API v2 não está habilitada');
@@ -316,13 +352,16 @@ class Notifish_Ajax {
             return;
         }
         
-        // Verifica nonce (opcional para compatibilidade, mas recomendado)
-        if (isset($_POST['nonce']) && !wp_verify_nonce($_POST['nonce'], 'notifish_ajax_nonce')) {
-            wp_send_json_error('Nonce inválido');
-            return;
+        // Verifica nonce
+        if (isset($_POST['nonce'])) {
+            $nonce = sanitize_text_field(wp_unslash($_POST['nonce']));
+            if (!wp_verify_nonce($nonce, 'notifish_ajax_nonce')) {
+                wp_send_json_error('Nonce inválido');
+                return;
+            }
         }
         
-        $versao = isset($this->options['versao_notifish']) ? $this->options['versao_notifish'] : 'v1';
+        $versao = Notifish::detect_api_version();
         
         if ($versao !== 'v2') {
             wp_send_json_error('API v2 não está habilitada');

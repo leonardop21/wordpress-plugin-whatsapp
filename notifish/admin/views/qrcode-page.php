@@ -18,7 +18,7 @@ if (!current_user_can('manage_options')) {
 $api_url = isset($options['api_url']) ? rtrim($options['api_url'], '/') . '/' : '';
 $api_key = isset($options['api_key']) ? $options['api_key'] : '';
 $instance_uuid = isset($options['instance_uuid']) ? $options['instance_uuid'] : '';
-$versao = isset($options['versao_notifish']) ? $options['versao_notifish'] : 'v1';
+$versao = Notifish::detect_api_version();
 ?>
 <div class="wrap">
     <h1>WhatsApp Status</h1>
@@ -78,7 +78,7 @@ wp_enqueue_script('jquery');
 var ajaxurl = typeof ajaxurl !== 'undefined' ? ajaxurl : '<?php echo esc_js(admin_url('admin-ajax.php')); ?>';
 var notifish_ajax = typeof notifish_ajax !== 'undefined' ? notifish_ajax : {
     ajaxurl: ajaxurl,
-    nonce: '<?php echo wp_create_nonce('notifish_ajax_nonce'); ?>'
+    nonce: '<?php echo esc_js(wp_create_nonce('notifish_ajax_nonce')); ?>'
 };
 jQuery(document).ready(function($) {
     let qrcodeInterval;
