@@ -9,6 +9,10 @@
 !.vscode/extensions.json
 !.vscode/*.code-snippets
 
+# SVN checkout and generated plugin icons for WordPress.org
+notifish-svn/
+svn-assets/
+
 # Local History for Visual Studio Code
 .history/
 
@@ -57,6 +61,9 @@ wp-config.php
 
 nf-funcionando
 /nf-funcionando
+notifish.zip
+deploy-to-svn.sh
+
 
 # All plugins
 # Note: If you wish to whitelist plugins,

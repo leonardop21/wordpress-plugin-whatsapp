@@ -30,8 +30,8 @@ class Notifish_Admin {
      */
     public function add_admin_menu() {
         add_menu_page(
-            'Configurações do Notifish', 
-            'Notifish', 
+            __('Notifish Settings', 'notifish'),
+            __('Notifish', 'notifish'),
             'manage_options', 
             'notifish', 
             array($this, 'render_config_page')
@@ -39,8 +39,8 @@ class Notifish_Admin {
     
         add_submenu_page(
             'notifish',
-            'Logs Enviadas', 
-            'Notifish Logs', 
+            __('Notifish Logs', 'notifish'),
+            __('Notifish Logs', 'notifish'),
             'manage_options', 
             'notifish_requests', 
             array($this, 'render_requests_page')
@@ -50,8 +50,8 @@ class Notifish_Admin {
         if (Notifish::detect_api_version() === 'v2') {
             add_submenu_page(
                 'notifish',
-                'WhatsApp Status',
-                'WhatsApp Status',
+                __('WhatsApp Status', 'notifish'),
+                __('WhatsApp Status', 'notifish'),
                 'manage_options',
                 'notifish_qrcode',
                 array($this, 'render_qrcode_page')
@@ -111,6 +111,9 @@ class Notifish_Admin {
         }
         if (isset($input['remove_data_on_uninstall'])) {
             $new_input['remove_data_on_uninstall'] = sanitize_text_field($input['remove_data_on_uninstall']);
+        }
+        if (isset($input['language'])) {
+            $new_input['language'] = sanitize_text_field($input['language']);
         }
         return $new_input;
     }
@@ -224,7 +227,7 @@ class Notifish_Admin {
     public function render_config_page() {
         // Verifica permissões
         if (!current_user_can('manage_options')) {
-            wp_die(__('You do not have sufficient permissions to access this page.'));
+            wp_die(__('You do not have sufficient permissions to access this page.', 'notifish'));
         }
         
         $this->options = get_option('notifish_options');
@@ -240,7 +243,7 @@ class Notifish_Admin {
     public function render_requests_page() {
         // Verifica permissões
         if (!current_user_can('manage_options')) {
-            wp_die(__('You do not have sufficient permissions to access this page.'));
+            wp_die(__('You do not have sufficient permissions to access this page.', 'notifish'));
         }
         
         require_once NOTIFISH_PLUGIN_DIR . 'admin/views/requests-page.php';
@@ -254,7 +257,7 @@ class Notifish_Admin {
     public function render_qrcode_page() {
         // Verifica permissões
         if (!current_user_can('manage_options')) {
-            wp_die(__('You do not have sufficient permissions to access this page.'));
+            wp_die(__('You do not have sufficient permissions to access this page.', 'notifish'));
         }
         
         $this->options = get_option('notifish_options');

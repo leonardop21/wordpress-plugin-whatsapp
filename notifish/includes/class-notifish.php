@@ -109,11 +109,49 @@ class Notifish {
         // Enqueue jQuery if not already enqueued
         wp_enqueue_script('jquery');
         
-        // Localize script with nonce for AJAX security
-        wp_localize_script('jquery', 'notifish_ajax', array(
-            'ajaxurl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('notifish_ajax_nonce')
-        ));
+        // Enqueue config page script
+        if ($hook === 'toplevel_page_notifish') {
+            wp_enqueue_script(
+                'notifish-config',
+                NOTIFISH_PLUGIN_URL . 'assets/js/config-page.js',
+                array('jquery'),
+                NOTIFISH_VERSION,
+                true
+            );
+            wp_localize_script(
+                'notifish-config',
+                'notifishConfig',
+                array(
+                    'ajaxurl' => admin_url('admin-ajax.php'),
+                    'nonce' => wp_create_nonce('notifish_dismiss_notice')
+                )
+            );
+        }
+
+        // Enqueue QR code page script
+        if ($hook === 'notifish_page_notifish_qrcode') {
+            $options = get_option('notifish_options');
+            $instance_uuid = isset($options['instance_uuid']) ? $options['instance_uuid'] : '';
+            $versao = self::detect_api_version();
+            
+            wp_enqueue_script(
+                'notifish-qrcode',
+                NOTIFISH_PLUGIN_URL . 'assets/js/qrcode-page.js',
+                array('jquery'),
+                NOTIFISH_VERSION,
+                true
+            );
+            wp_localize_script(
+                'notifish-qrcode',
+                'notifishQRCode',
+                array(
+                    'ajaxurl' => admin_url('admin-ajax.php'),
+                    'nonce' => wp_create_nonce('notifish_ajax_nonce'),
+                    'instanceUuid' => esc_js($instance_uuid),
+                    'versao' => esc_js($versao)
+                )
+            );
+        }
     }
 
     /**
