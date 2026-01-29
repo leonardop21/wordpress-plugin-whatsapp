@@ -16,11 +16,17 @@ class Notifish_Logger {
     private $logging_enabled;
 
     public function __construct() {
-        $this->log_dir = WP_CONTENT_DIR . '/logs-notifish';
+        // Define log directory inside uploads/notifish/logs to comply with WP.org guidelines
+        $upload_dir      = wp_upload_dir();
+        $base_upload_dir = isset($upload_dir['basedir']) ? $upload_dir['basedir'] : WP_CONTENT_DIR . '/uploads';
+
+        $this->log_dir = trailingslashit($base_upload_dir) . 'notifish/logs';
+
         if (!file_exists($this->log_dir)) {
             wp_mkdir_p($this->log_dir);
         }
-        $this->log_file = $this->log_dir . '/notifish-' . date('Y-m-d') . '.log';
+
+        $this->log_file = trailingslashit($this->log_dir) . 'notifish-' . date('Y-m-d') . '.log';
         
         // Verifica se logging está habilitado (padrão: desabilitado)
         $options = get_option('notifish_options', array());

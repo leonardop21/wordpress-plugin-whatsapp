@@ -25,10 +25,13 @@ if ($remove_data) {
     $table_name = $wpdb->prefix . 'notifish_requests';
     $wpdb->query("DROP TABLE IF EXISTS {$table_name}");
     
-    // Delete log directory
-    $log_dir = WP_CONTENT_DIR . '/logs-notifish';
-    if (file_exists($log_dir)) {
-        $log_files = glob("$log_dir/*.log");
+    // Delete log directory inside uploads/notifish/logs
+    $upload_dir      = wp_upload_dir();
+    $base_upload_dir = isset($upload_dir['basedir']) ? $upload_dir['basedir'] : WP_CONTENT_DIR . '/uploads';
+    $log_dir         = trailingslashit($base_upload_dir) . 'notifish/logs';
+
+    if (file_exists($log_dir) && is_dir($log_dir)) {
+        $log_files = glob($log_dir . '/*.log');
         if ($log_files) {
             array_map('unlink', $log_files);
         }
