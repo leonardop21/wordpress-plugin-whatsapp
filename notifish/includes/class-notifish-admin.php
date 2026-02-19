@@ -69,6 +69,24 @@ class Notifish_Admin {
     }
 
     /**
+     * Chamado após salvar as opções do Notifish. Grava uma linha de teste no log quando logging é ativado.
+     *
+     * @param mixed  $old_value Valor anterior da opção
+     * @param mixed  $value     Novo valor (array notifish_options)
+     * @param string $option    Nome da opção
+     * @return void
+     */
+    public function on_notifish_options_saved($old_value, $value, $option) {
+        if (!is_array($value) || empty($value['enable_logging']) || $value['enable_logging'] != '1') {
+            return;
+        }
+        $this->logger->write('Notifish: logging ativado; arquivo de log criado/atualizado com sucesso.', array(
+            'caminho_arquivo' => $this->logger->get_log_file(),
+            'caminho_pasta'   => $this->logger->get_log_dir(),
+        ));
+    }
+
+    /**
      * Sanitize settings input
      *
      * @param array $input Input data
@@ -213,6 +231,9 @@ class Notifish_Admin {
         if ($status === 'publish' && $my_data == '1') {
             // Verifica se o post já foi enviado anteriormente
             if (!$this->database->post_was_sent($post_id)) {
+                if (isset($_POST['_thumbnail_id']) && (int) $_POST['_thumbnail_id'] > 0) {
+                    set_transient('notifish_thumbnail_id_' . $post_id, (int) $_POST['_thumbnail_id'], 60);
+                }
                 do_action('notifish_send_message', $post_id);
             }
             // Se já foi enviado, não faz nada (o usuário deve usar o menu Notifish Logs para reenviar)

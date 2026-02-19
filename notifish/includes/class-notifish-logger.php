@@ -13,7 +13,6 @@ if (!defined('ABSPATH')) {
 class Notifish_Logger {
     private $log_file;
     private $log_dir;
-    private $logging_enabled;
 
     public function __construct() {
         // Define log directory inside uploads/notifish/logs to comply with WP.org guidelines
@@ -27,10 +26,27 @@ class Notifish_Logger {
         }
 
         $this->log_file = trailingslashit($this->log_dir) . 'notifish-' . date('Y-m-d') . '.log';
-        
-        // Verifica se logging está habilitado (padrão: desabilitado)
+        // log_file mantido para compatibilidade; o path real é calculado em get_log_file_path() a cada escrita
+    }
+
+    /**
+     * Verifica se o logging está habilitado (lê a opção a cada verificação para refletir alterações).
+     *
+     * @return bool
+     */
+    private function is_logging_enabled() {
         $options = get_option('notifish_options', array());
-        $this->logging_enabled = isset($options['enable_logging']) ? ($options['enable_logging'] == '1') : false;
+        $val = isset($options['enable_logging']) ? $options['enable_logging'] : '';
+        return $val === '1' || $val === 1;
+    }
+
+    /**
+     * Retorna o caminho do arquivo de log para a data atual (usado em cada escrita).
+     *
+     * @return string
+     */
+    private function get_log_file_path() {
+        return trailingslashit($this->log_dir) . 'notifish-' . date('Y-m-d') . '.log';
     }
 
     /**
@@ -42,11 +58,16 @@ class Notifish_Logger {
      * @return void
      */
     public function write($message, $data = null) {
-        // Verifica se logging está habilitado (verificação inteligente - sem if em cada chamada)
-        if (!$this->logging_enabled) {
+        if (!$this->is_logging_enabled()) {
             return;
         }
-        
+
+        if (!is_dir($this->log_dir) && !wp_mkdir_p($this->log_dir)) {
+            error_log('Notifish: não foi possível criar o diretório de logs: ' . $this->log_dir);
+            return;
+        }
+
+        $log_file = $this->get_log_file_path();
         $timestamp = date('Y-m-d H:i:s');
         $log_message = "[$timestamp] $message";
         
@@ -55,8 +76,12 @@ class Notifish_Logger {
         }
         
         $log_message .= "\n" . str_repeat('-', 80) . "\n";
-        
-        file_put_contents($this->log_file, $log_message, FILE_APPEND);
+
+        $written = @file_put_contents($log_file, $log_message, FILE_APPEND | LOCK_EX);
+        if ($written === false) {
+            $err = error_get_last();
+            error_log('Notifish: não foi possível gravar no arquivo de log: ' . $log_file . (is_array($err) ? ' | PHP: ' . $err['message'] : ''));
+        }
     }
 
     /**
@@ -69,12 +94,12 @@ class Notifish_Logger {
     }
 
     /**
-     * Get current log file path
+     * Get current log file path (para a data de hoje)
      *
      * @return string
      */
     public function get_log_file() {
-        return $this->log_file;
+        return $this->get_log_file_path();
     }
 }
 

@@ -95,7 +95,10 @@ if (!defined('ABSPATH')) {
                         <option value="0" <?php echo (!isset($options['enable_logging']) || $options['enable_logging'] == '0') ? 'selected' : ''; ?>>Não</option>
                         <option value="1" <?php echo (isset($options['enable_logging']) && $options['enable_logging'] == '1') ? 'selected' : ''; ?>>Sim</option>
                     </select>
-                    <p class="description">Se desabilitado, nenhum log será gravado em <code>wp-content/logs-notifish/</code>. Os logs ajudam a diagnosticar problemas.</p>
+                    <p class="description">Se desabilitado, nenhum log será gravado. Os arquivos ficam em <code>wp-content/uploads/notifish/logs/</code>. Ative para diagnosticar problemas de envio.</p>
+                    <?php if (empty($options['enable_logging']) || $options['enable_logging'] === '0') : ?>
+                    <p class="description" style="color: #b32d2e;"><strong>Logs estão desativados.</strong> Selecione "Sim" e salve para começar a gravar.</p>
+                    <?php endif; ?>
                 </td>
             </tr>
             <tr valign="top">

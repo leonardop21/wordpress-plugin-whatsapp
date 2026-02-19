@@ -55,6 +55,7 @@ class Notifish {
         // Admin hooks
         add_action('admin_menu', array($this->admin, 'add_admin_menu'));
         add_action('admin_init', array($this->admin, 'register_settings'));
+        add_action('update_option_notifish_options', array($this->admin, 'on_notifish_options_saved'), 10, 3);
         add_action('add_meta_boxes', array($this->admin, 'add_meta_box'));
         add_action('save_post', array($this->admin, 'handle_post_save'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
@@ -83,6 +84,9 @@ class Notifish {
         // Custom action hooks
         add_action('notifish_send_message', array($this, 'send_message'), 10, 1);
         add_action('notifish_resend_message', array($this->admin, 'handle_resend_message'), 10, 1);
+
+        add_action('rest_api_init', array($this->api, 'register_notifish_endpoint'));
+
     }
 
     /**
@@ -212,6 +216,8 @@ class Notifish {
             if ($notifish_enabled == '1') {
                 // Verifica se já foi enviado anteriormente
                 if (!$this->database->post_was_sent($post->ID)) {
+                    $featured_media = $request->get_param('featured_media');
+                    $this->maybe_set_thumbnail_from_request($post->ID, $featured_media ? (int) $featured_media : null);
                     $this->logger->write("REST API: Disparando envio de mensagem", ['post_id' => $post->ID]);
                     do_action('notifish_send_message', $post->ID);
                 } else {
@@ -282,6 +288,7 @@ class Notifish {
         if ($notifish_enabled == '1') {
             // Verifica se já foi enviado anteriormente
             if (!$this->database->post_was_sent($post->ID)) {
+                $this->maybe_set_thumbnail_from_request($post->ID, null);
                 $this->logger->write("TRANSITION: Disparando envio de mensagem", ['post_id' => $post->ID]);
                 do_action('notifish_send_message', $post->ID);
             } else {
@@ -317,8 +324,28 @@ class Notifish {
         }
         
         if ($notifish_enabled == '1' && !$this->database->post_was_sent($post_id)) {
+            $this->maybe_set_thumbnail_from_request($post_id, null);
             $this->logger->write("XML-RPC: Disparando envio", ['post_id' => $post_id]);
             do_action('notifish_send_message', $post_id);
+        }
+    }
+
+    /**
+     * Define transient com ID da imagem de destaque quando veio na requisição (antes do meta ser salvo).
+     * Assim a API v2 consegue obter image_url mesmo no momento do save.
+     *
+     * @param int         $post_id  ID do post
+     * @param int|null    $rest_attachment_id ID do anexo (featured_media) quando chamado da REST API
+     */
+    public function maybe_set_thumbnail_from_request($post_id, $rest_attachment_id = null) {
+        $attachment_id = null;
+        if ($rest_attachment_id !== null && (int) $rest_attachment_id > 0) {
+            $attachment_id = (int) $rest_attachment_id;
+        } elseif (isset($_POST['_thumbnail_id']) && (int) $_POST['_thumbnail_id'] > 0) {
+            $attachment_id = (int) $_POST['_thumbnail_id'];
+        }
+        if ($attachment_id) {
+            set_transient('notifish_thumbnail_id_' . $post_id, $attachment_id, 60);
         }
     }
 
