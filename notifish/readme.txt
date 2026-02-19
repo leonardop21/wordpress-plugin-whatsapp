@@ -56,7 +56,7 @@ This plugin connects to the **Notifish API** to send WhatsApp messages. When you
 2. Activate the plugin through the 'Plugins' menu in WordPress
 3. Go to the Notifish menu and configure your API settings
 4. Enter your API URL, Instance UUID, and API Key
-5. Choose your API version (v1 or v2)
+5. Use an API URL that includes the version path (e.g. .../api/v2/)
 6. Enable "WhatsApp by default" if you want the checkbox pre-checked for new posts
 7. Start publishing posts with WhatsApp notifications!
 
@@ -78,9 +78,9 @@ Yes! The plugin is fully compatible with the official WordPress app for iOS and 
 
 Yes, go to Notifish Logs in your WordPress admin and click the "Resend" button next to any message.
 
-= What's the difference between API v1 and v2? =
+= Which API version does the plugin use? =
 
-API v2 includes additional features like WhatsApp session management, QR Code display, and link previews. API v1 is the legacy version.
+The plugin uses the Notifish API v2 only. Your API URL must include the version path (e.g. .../api/v2/). This provides WhatsApp session management, QR Code display, and link previews.
 
 = Is my data safe? =
 
@@ -89,7 +89,7 @@ The plugin only sends post titles and URLs to the Notifish API. No personal user
 == Screenshots ==
 
 1. Plugin settings page - Configure your Notifish API credentials
-4. WhatsApp Status page (API v2) - View QR Code and manage WhatsApp session
+4. WhatsApp Status page - View QR Code and manage WhatsApp session
 
 == Changelog ==
 

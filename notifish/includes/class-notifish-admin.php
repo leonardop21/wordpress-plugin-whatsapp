@@ -46,17 +46,14 @@ class Notifish_Admin {
             array($this, 'render_requests_page')
         );
         
-        // Menu WhatsApp Status só aparece para API v2
-        if (Notifish::detect_api_version() === 'v2') {
-            add_submenu_page(
-                'notifish',
-                __('WhatsApp Status', 'notifish'),
-                __('WhatsApp Status', 'notifish'),
-                'manage_options',
-                'notifish_qrcode',
-                array($this, 'render_qrcode_page')
-            );
-        }
+        add_submenu_page(
+            'notifish',
+            __('WhatsApp Status', 'notifish'),
+            __('WhatsApp Status', 'notifish'),
+            'manage_options',
+            'notifish_qrcode',
+            array($this, 'render_qrcode_page')
+        );
     }
 
     /**
@@ -102,9 +99,6 @@ class Notifish_Admin {
         }
         if (isset($input['default_whatsapp_enabled'])) {
             $new_input['default_whatsapp_enabled'] = sanitize_text_field($input['default_whatsapp_enabled']);
-        }
-        if (isset($input['versao_notifish'])) {
-            $new_input['versao_notifish'] = sanitize_text_field($input['versao_notifish']);
         }
         if (isset($input['enable_logging'])) {
             $new_input['enable_logging'] = sanitize_text_field($input['enable_logging']);
@@ -261,15 +255,6 @@ class Notifish_Admin {
         }
         
         $this->options = get_option('notifish_options');
-        $versao = Notifish::detect_api_version();
-        
-        if ($versao !== 'v2') {
-            echo '<div class="wrap"><h1>WhatsApp Status</h1>';
-            echo '<div class="notice notice-error"><p>Esta funcionalidade está disponível apenas para API v2. Verifique se a URL da API contém /v2/.</p></div>';
-            echo '</div>';
-            return;
-        }
-        
         $options = $this->options;
         require_once NOTIFISH_PLUGIN_DIR . 'admin/views/qrcode-page.php';
     }
@@ -281,13 +266,7 @@ class Notifish_Admin {
      * @return void
      */
     public function handle_resend_message($request) {
-        $versao = Notifish::detect_api_version();
-        
-        if ($versao === 'v2') {
-            $this->api->resend_message_v2($request);
-        } else {
-            $this->api->resend_message_v1($request);
-        }
+        $this->api->resend_message($request);
     }
 }
 

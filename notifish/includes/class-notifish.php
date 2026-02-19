@@ -132,7 +132,6 @@ class Notifish {
         if ($hook === 'notifish_page_notifish_qrcode') {
             $options = get_option('notifish_options');
             $instance_uuid = isset($options['instance_uuid']) ? $options['instance_uuid'] : '';
-            $versao = self::detect_api_version();
             
             wp_enqueue_script(
                 'notifish-qrcode',
@@ -148,7 +147,7 @@ class Notifish {
                     'ajaxurl' => admin_url('admin-ajax.php'),
                     'nonce' => wp_create_nonce('notifish_ajax_nonce'),
                     'instanceUuid' => esc_js($instance_uuid),
-                    'versao' => esc_js($versao)
+                    'versao' => 'v2'
                 )
             );
         }
@@ -323,32 +322,6 @@ class Notifish {
     }
 
     /**
-     * Detect API version from URL
-     * Extrai a versão da API a partir da URL (ex: /v1/ ou /v2/)
-     *
-     * @param string|null $api_url URL da API (se null, busca das opções)
-     * @return string Versão detectada ('v1' ou 'v2'), padrão 'v1'
-     */
-    public static function detect_api_version($api_url = null) {
-        if ($api_url === null) {
-            $options = get_option('notifish_options');
-            $api_url = isset($options['api_url']) ? $options['api_url'] : '';
-        }
-        
-        if (preg_match('/\/v(\d+)\/?/', $api_url, $matches)) {
-            return 'v' . $matches[1];
-        }
-        
-        // Fallback: verificar se existe versao_notifish salva (migração de versões anteriores)
-        $options = get_option('notifish_options');
-        if (isset($options['versao_notifish'])) {
-            return $options['versao_notifish'];
-        }
-        
-        return 'v1'; // Padrão
-    }
-
-    /**
      * Send message handler
      *
      * @param int $post_id Post ID
@@ -356,16 +329,7 @@ class Notifish {
      */
     public function send_message($post_id) {
         $this->logger->write("=== INÍCIO: send_message ===", ['post_id' => $post_id]);
-        
-        $versao = self::detect_api_version();
-        $this->logger->write("Versão da API detectada: " . $versao, ['post_id' => $post_id]);
-        
-        if ($versao === 'v2') {
-            $this->api->send_message_v2($post_id);
-        } else {
-            $this->api->send_message_v1($post_id);
-        }
-        
+        $this->api->send_message($post_id);
         $this->logger->write("=== FIM: send_message ===");
     }
 }

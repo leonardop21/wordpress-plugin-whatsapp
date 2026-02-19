@@ -51,99 +51,15 @@ class Notifish_API {
     }
 
     /**
-     * Send message via API v1
+     * Send message via API
      *
      * @param int $post_id Post ID
      * @return void
      */
-    public function send_message_v1($post_id) {
-        $this->logger->write("=== INÍCIO: send_message_v1 ===", ['post_id' => $post_id]);
+    public function send_message($post_id) {
+        $this->logger->write("=== INÍCIO: send_message ===", ['post_id' => $post_id]);
         
-        error_log("Notifish: Usando API v1 para post ID: " . $post_id);
-        
-        if (empty($this->options['api_url']) || empty($this->options['api_key']) || empty($this->options['instance_uuid'])) {
-            $this->logger->write("ERRO: Configurações não encontradas - ABORTANDO", [
-                'api_url' => isset($this->options['api_url']) ? 'OK' : 'FALTANDO',
-                'api_key' => isset($this->options['api_key']) ? 'OK' : 'FALTANDO',
-                'instance_uuid' => isset($this->options['instance_uuid']) ? 'OK' : 'FALTANDO'
-            ]);
-            return;
-        }
-        
-        $post_title = sanitize_text_field(html_entity_decode(get_the_title($post_id), ENT_QUOTES, 'UTF-8'));
-        $post_url = esc_url_raw(get_permalink($post_id) . '?utm_source=whatsapp');
-        $instance_uuid = sanitize_text_field($this->options['instance_uuid']);
-        $blog_name = sanitize_text_field(get_bloginfo('name'));
-        
-        $this->logger->write("Dados do post preparados", [
-            'post_title' => $post_title,
-            'post_url' => $post_url,
-            'instance_uuid' => $instance_uuid
-        ]);
-
-        $body_data = array(
-            'identifier' => absint($post_id) . ' ' . $blog_name . ' - Wordpress',
-            'link' => true,
-            'typing' => 'composing',
-            'delay' => 1200,
-            'message' => "*" . $post_title . "* \n\n " . $post_url,
-        );
-        
-        $headers = array(
-            'Content-Type' => 'application/json',
-            'Authorization' => 'Bearer ' . $this->options['api_key'],
-            'Accept' => 'application/json'
-        );
-
-        $api_url_base = rtrim($this->options['api_url'], '/');
-        $api_endpoint = $api_url_base . '/' . $instance_uuid . '/whatsapp/message/groups';
-        
-        $this->logger->write("PREPARANDO ENVIO - v1", [
-            'url_montada' => $api_endpoint,
-            'headers' => $headers,
-            'body' => $body_data
-        ]);
-        
-        $response = wp_remote_post($api_endpoint, array(
-            'body' => json_encode($body_data),
-            'headers' => $headers
-        ));
-        
-        $status_code = wp_remote_retrieve_response_code($response);
-        $response_body = wp_remote_retrieve_body($response);
-        $is_wp_error = is_wp_error($response);
-
-        $this->logger->write("RESPOSTA DA API - v1", [
-            'status_code' => $status_code,
-            'is_wp_error' => $is_wp_error,
-            'response_body' => $response_body
-        ]);
-
-        $friendly_message = $this->get_friendly_message($status_code, $response_body);
-        
-        $this->database->save_request(array(
-            'post_id' => $post_id,
-            'post_title' => $post_title,
-            'phone_number' => 'Grupo',
-            'status_code' => $status_code,
-            'user_id' => get_current_user_id(),
-            'user_name' => sanitize_text_field(get_the_author_meta('display_name', get_current_user_id())),
-            'response' => $friendly_message
-        ));
-        
-        $this->logger->write("=== FIM: send_message_v1 ===");
-    }
-
-    /**
-     * Send message via API v2
-     *
-     * @param int $post_id Post ID
-     * @return void
-     */
-    public function send_message_v2($post_id) {
-        $this->logger->write("=== INÍCIO: send_message_v2 ===", ['post_id' => $post_id]);
-        
-        error_log("Notifish: Usando API v2 para post ID: " . $post_id);
+        error_log("Notifish: Enviando mensagem para post ID: " . $post_id);
         
         $api_url = isset($this->options['api_url']) ? rtrim($this->options['api_url'], '/') : '';
         $api_key = isset($this->options['api_key']) ? $this->options['api_key'] : '';
@@ -159,7 +75,7 @@ class Notifish_API {
         $blog_name = sanitize_text_field(get_bloginfo('name'));
         $message_text = "*" . $post_title . "* \n\n " . $post_url;
 
-        $this->logger->write("Dados do post preparados - v2", [
+        $this->logger->write("Dados do post preparados", [
             'post_title' => $post_title,
             'post_url' => $post_url
         ]);
@@ -179,7 +95,7 @@ class Notifish_API {
             'Accept' => 'application/json'
         );
 
-        $this->logger->write("PREPARANDO ENVIO - v2", [
+        $this->logger->write("PREPARANDO ENVIO", [
             'url_montada' => $api_endpoint,
             'headers' => $headers,
             'body' => $body_data
@@ -194,7 +110,7 @@ class Notifish_API {
         $response_body = wp_remote_retrieve_body($response);
         $is_wp_error = is_wp_error($response);
 
-        $this->logger->write("RESPOSTA DA API - v2", [
+        $this->logger->write("RESPOSTA DA API", [
             'status_code' => $status_code,
             'is_wp_error' => $is_wp_error,
             'response_body' => $response_body
@@ -212,91 +128,17 @@ class Notifish_API {
             'response' => $friendly_message
         ));
         
-        $this->logger->write("=== FIM: send_message_v2 ===");
+        $this->logger->write("=== FIM: send_message ===");
     }
 
     /**
-     * Resend message via API v1
+     * Resend message via API
      *
      * @param object $request Request object
      * @return void
      */
-    public function resend_message_v1($request) {
-        $this->logger->write("=== INÍCIO: resend_message_v1 ===", [
-            'request_id' => $request->id,
-            'post_id' => $request->post_id
-        ]);
-        
-        if (empty($this->options['api_url']) || empty($this->options['api_key']) || empty($this->options['instance_uuid'])) {
-            $this->logger->write("ERRO: Configurações não encontradas - ABORTANDO REENVIO");
-            return;
-        }
-
-        $post_title = sanitize_text_field(html_entity_decode(get_the_title($request->post_id), ENT_QUOTES, 'UTF-8'));
-        $post_url = esc_url_raw(get_permalink($request->post_id) . '?utm_source=whatsapp');
-        $blog_name = sanitize_text_field(get_bloginfo('name'));
-
-        $body_data = array(
-            'identifier' => absint($request->post_id) . ' ' . $blog_name . ' - Wordpress resend',
-            'link' => true,
-            'typing' => 'composing',
-            'delay' => 1200,
-            'message' => "*" . $post_title . "* \n\n " . $post_url,
-        );
-        
-        $headers = array(
-            'Content-Type' => 'application/json',
-            'Authorization' => 'Bearer ' . $this->options['api_key'],
-            'Accept' => 'application/json'
-        );
-
-        $api_url_base = rtrim($this->options['api_url'], '/');
-        $api_endpoint = esc_url_raw($api_url_base . '/' . $this->options['instance_uuid'] . '/whatsapp/message/groups');
-        
-        $this->logger->write("PREPARANDO REENVIO - v1", [
-            'url_montada' => $api_endpoint,
-            'headers' => $headers,
-            'body' => $body_data
-        ]);
-
-        $response = wp_remote_post($api_endpoint, array(
-            'body' => json_encode($body_data),
-            'headers' => $headers
-        ));
-        
-        $status_code = wp_remote_retrieve_response_code($response);
-        $response_body = wp_remote_retrieve_body($response);
-        $is_wp_error = is_wp_error($response);
-
-        $this->logger->write("RESPOSTA DA API - REENVIO v1", [
-            'status_code' => $status_code,
-            'is_wp_error' => $is_wp_error,
-            'response_body' => $response_body
-        ]);
-
-        $friendly_message = $this->get_friendly_message($status_code, $response_body);
-        
-        $this->database->save_request(array(
-            'post_id' => $request->post_id,
-            'post_title' => $post_title,
-            'phone_number' => 'Grupo',
-            'status_code' => $status_code,
-            'user_id' => get_current_user_id(),
-            'user_name' => sanitize_text_field(get_the_author_meta('display_name', get_current_user_id())),
-            'response' => $friendly_message
-        ));
-        
-        $this->logger->write("=== FIM: resend_message_v1 ===");
-    }
-
-    /**
-     * Resend message via API v2
-     *
-     * @param object $request Request object
-     * @return void
-     */
-    public function resend_message_v2($request) {
-        $this->logger->write("=== INÍCIO: resend_message_v2 ===", [
+    public function resend_message($request) {
+        $this->logger->write("=== INÍCIO: resend_message ===", [
             'request_id' => $request->id,
             'post_id' => $request->post_id
         ]);
@@ -330,7 +172,7 @@ class Notifish_API {
             'Accept' => 'application/json'
         );
 
-        $this->logger->write("PREPARANDO REENVIO - v2", [
+        $this->logger->write("PREPARANDO REENVIO", [
             'url_montada' => $api_endpoint,
             'headers' => $headers,
             'body' => $body_data
@@ -345,7 +187,7 @@ class Notifish_API {
         $response_body = wp_remote_retrieve_body($response);
         $is_wp_error = is_wp_error($response);
 
-        $this->logger->write("RESPOSTA DA API - REENVIO v2", [
+        $this->logger->write("RESPOSTA DA API - REENVIO", [
             'status_code' => $status_code,
             'is_wp_error' => $is_wp_error,
             'response_body' => $response_body
@@ -363,7 +205,7 @@ class Notifish_API {
             'response' => $friendly_message
         ));
         
-        $this->logger->write("=== FIM: resend_message_v2 ===");
+        $this->logger->write("=== FIM: resend_message ===");
     }
 }
 

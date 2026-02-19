@@ -51,7 +51,7 @@ if (!defined('ABSPATH')) {
                 <th scope="row">URL da API</th>
                 <td>
                     <input type="text" id="api_url" name="notifish_options[api_url]" value="<?php echo isset($options['api_url']) ? esc_attr($options['api_url']) : ''; ?>" style="width: 100%; padding-right: 40px;" />
-                    <p class="description"><strong>Importante:</strong> A URL da API deve incluir a versão (ex: https://meu-dominio.notifish.com/api/v1/ ou https://meu-dominio.notifish.com/api/v2/).</p>
+                    <p class="description"><strong>Importante:</strong> A URL da API deve incluir a versão (ex: https://meu-dominio.notifish.com/api/v2/).</p>
                 </td>
             </div>
             </tr>

@@ -18,7 +18,6 @@ if (!current_user_can('manage_options')) {
 $api_url = isset($options['api_url']) ? rtrim($options['api_url'], '/') . '/' : '';
 $api_key = isset($options['api_key']) ? $options['api_key'] : '';
 $instance_uuid = isset($options['instance_uuid']) ? $options['instance_uuid'] : '';
-$versao = Notifish::detect_api_version();
 ?>
 <div class="wrap">
     <h1>WhatsApp Status</h1>

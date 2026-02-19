@@ -67,13 +67,6 @@ class Notifish_Ajax {
             }
         }
         
-        $versao = Notifish::detect_api_version();
-        
-        if ($versao !== 'v2') {
-            wp_send_json_error('API v2 não está habilitada');
-            return;
-        }
-        
         $api_url = isset($this->options['api_url']) ? rtrim($this->options['api_url'], '/') : '';
         $api_key = isset($this->options['api_key']) ? $this->options['api_key'] : '';
         $instance_uuid = isset($this->options['instance_uuid']) ? $this->options['instance_uuid'] : '';
@@ -200,13 +193,6 @@ class Notifish_Ajax {
             }
         }
         
-        $versao = Notifish::detect_api_version();
-        
-        if ($versao !== 'v2') {
-            wp_send_json_error('API v2 não está habilitada');
-            return;
-        }
-        
         $api_url = isset($this->options['api_url']) ? rtrim($this->options['api_url'], '/') : '';
         $api_key = isset($this->options['api_key']) ? $this->options['api_key'] : '';
         $instance_uuid = isset($this->options['instance_uuid']) ? $this->options['instance_uuid'] : '';
@@ -291,13 +277,6 @@ class Notifish_Ajax {
             }
         }
         
-        $versao = Notifish::detect_api_version();
-        
-        if ($versao !== 'v2') {
-            wp_send_json_error('API v2 não está habilitada');
-            return;
-        }
-        
         $api_url = isset($this->options['api_url']) ? rtrim($this->options['api_url'], '/') : '';
         $api_key = isset($this->options['api_key']) ? $this->options['api_key'] : '';
         $instance_uuid = isset($this->options['instance_uuid']) ? $this->options['instance_uuid'] : '';
@@ -359,13 +338,6 @@ class Notifish_Ajax {
                 wp_send_json_error('Nonce inválido');
                 return;
             }
-        }
-        
-        $versao = Notifish::detect_api_version();
-        
-        if ($versao !== 'v2') {
-            wp_send_json_error('API v2 não está habilitada');
-            return;
         }
         
         $api_url = isset($this->options['api_url']) ? rtrim($this->options['api_url'], '/') : '';
