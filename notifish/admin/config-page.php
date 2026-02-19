@@ -35,20 +35,6 @@ if (!defined('ABSPATH')) {
                 </a>
             </p>
         </div>
-        <script>
-        jQuery(document).ready(function($) {
-            $('.notifish-credentials-notice').on('click', '.notice-dismiss', function() {
-                $.ajax({
-                    url: ajaxurl,
-                    type: 'POST',
-                    data: {
-                        action: 'notifish_dismiss_credentials_notice',
-                        nonce: '<?php echo esc_js(wp_create_nonce('notifish_dismiss_notice')); ?>'
-                    }
-                });
-            });
-        });
-        </script>
         <?php
     }
     ?>
@@ -122,22 +108,21 @@ if (!defined('ABSPATH')) {
                     <p class="description"><strong>Atenção:</strong> Se marcado como "Sim", ao desinstalar o plugin, a tabela de requests e os arquivos de log serão removidos permanentemente.</p>
                 </td>
             </tr>
+            <tr valign="top">
+                <th scope="row">Idioma do plugin</th>
+                <td>
+                    <?php
+                    $current_language = isset($options['language']) ? $options['language'] : '';
+                    ?>
+                    <select name="notifish_options[language]">
+                        <option value="" <?php selected($current_language, ''); ?>>Usar idioma do site (recomendado)</option>
+                        <option value="en_US" <?php selected($current_language, 'en_US'); ?>>English (US)</option>
+                        <option value="pt_BR" <?php selected($current_language, 'pt_BR'); ?>>Português (Brasil)</option>
+                    </select>
+                    <p class="description">Esta opção afeta apenas os textos do plugin Notifish. Por padrão, ele segue o idioma configurado no WordPress.</p>
+                </td>
+            </tr>
         </table>
         <?php submit_button(); ?>
     </form>
 </div>
-
-<script>
-function togglePassword(fieldId) {
-    const field = document.getElementById(fieldId);
-    const button = field.nextElementSibling;
-    
-    if (field.type === 'password') {
-        field.type = 'text';
-        button.textContent = '🙈';
-    } else {
-        field.type = 'password';
-        button.textContent = '👁️';
-    }
-}
-</script>
