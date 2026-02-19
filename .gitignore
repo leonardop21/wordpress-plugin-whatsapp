@@ -58,6 +58,9 @@ wp-config.php
 nf-funcionando
 /nf-funcionando
 
+notifish-svn
+deploy-to-svn.sh
+
 # All plugins
 # Note: If you wish to whitelist plugins,
 # uncomment the next line
