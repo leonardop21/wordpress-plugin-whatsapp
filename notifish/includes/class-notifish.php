@@ -61,6 +61,7 @@ class Notifish {
         
         // REST API hooks - para compatibilidade com app WordPress iOS/Android
         add_action('init', array($this, 'register_post_meta_for_rest'));
+        add_action('rest_api_init', array($this, 'register_notifish_endpoint'));
         add_action('rest_after_insert_post', array($this, 'handle_rest_post_insert'), 10, 3);
         
         // Hook universal para qualquer publicação de post (REST API, XML-RPC, Cron, Admin)
@@ -185,6 +186,84 @@ class Notifish {
             },
             'sanitize_callback' => 'sanitize_text_field',
         ));
+    }
+
+    /**
+     * Registra endpoint REST para o Notifish acessar dados do post (scrap).
+     * URL: GET /wp-json/notifish/v1/post/{id}/{key}
+     */
+    public function register_notifish_endpoint() {
+        register_rest_route('notifish/v1', '/post/(?P<id>\d+)/(?P<key>[a-zA-Z0-9\-_]+)', array(
+            'methods'             => 'GET',
+            'permission_callback' => '__return_true',
+            'callback'            => array($this, 'notifish_endpoint_callback'),
+            'args'                => array(
+                'id'  => array(
+                    'required'          => true,
+                    'validate_callback' => function ($param) {
+                        return is_numeric($param) && absint($param) > 0;
+                    },
+                ),
+                'key' => array(
+                    'required' => true,
+                ),
+            ),
+        ));
+    }
+
+    /**
+     * Callback do endpoint GET notifish/v1/post/{id}/{key}
+     * Retorna url e featured_image do post para o Notifish fazer scrap.
+     */
+    public function notifish_endpoint_callback(WP_REST_Request $request) {
+        $CACHE_TTL         = 60;
+        $RATE_LIMIT_TTL    = 30;
+        $RATE_LIMIT_MAX    = 10;
+        $ip                = isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'])) : 'unknown';
+        $rate_key          = 'notifish_rl_' . md5($ip);
+        $current_count     = (int) get_transient($rate_key);
+
+        if ($current_count >= $RATE_LIMIT_MAX) {
+            return new WP_REST_Response(array('error' => 'Too many requests'), 429);
+        }
+        set_transient($rate_key, $current_count + 1, $RATE_LIMIT_TTL);
+
+        $key = (string) $request->get_param('key');
+        $options = get_option('notifish_options', array());
+        $instance_uuid = isset($options['instance_uuid']) ? (string) $options['instance_uuid'] : '';
+
+        if ($instance_uuid === '' || !hash_equals($instance_uuid, $key)) {
+            $this->logger->write('Notifish endpoint: Invalid key from IP ' . $ip);
+            return new WP_REST_Response(array('error' => 'Invalid API key'), 401);
+        }
+
+        $post_id = absint($request->get_param('id'));
+        if (!$post_id) {
+            return new WP_REST_Response(array('error' => 'Invalid post ID'), 400);
+        }
+
+        $cache_key = 'notifish_post_' . $post_id;
+        $cached = get_transient($cache_key);
+        if ($cached !== false) {
+            return new WP_REST_Response($cached, 200);
+        }
+
+        $post = get_post($post_id);
+        if (!$post || $post->post_status !== 'publish') {
+            return new WP_REST_Response(array('error' => 'Post not found'), 404);
+        }
+
+        $thumb_id = get_post_thumbnail_id($post_id);
+        $featured_image = $thumb_id ? wp_get_attachment_image_url($thumb_id, 'full') : null;
+
+        $response = array(
+            'post_id'        => $post_id,
+            'url'            => esc_url_raw(get_permalink($post_id)),
+            'featured_image' => $featured_image,
+        );
+
+        set_transient($cache_key, $response, $CACHE_TTL);
+        return new WP_REST_Response($response, 200);
     }
 
     /**

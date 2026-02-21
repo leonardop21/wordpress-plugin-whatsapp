@@ -105,6 +105,7 @@ class Notifish_API {
                     'music' => !empty($this->options['midia_social_music']),
                     'music_id' => isset($this->options['midia_social_music_id']) ? absint($this->options['midia_social_music_id']) : 0,
                     'publish' => !empty($this->options['midia_social_publish']),
+                    
                 );
                 if (!empty($this->options['midia_social_logo_url'])) {
                     $social_media['logo'] = esc_url_raw($this->options['midia_social_logo_url']);
