@@ -98,6 +98,14 @@ class Notifish_API {
                 if ($bg === '') {
                     $bg = '#333333';
                 }
+
+                $link_scraping = sprintf(
+                    '%s/wp-json/wp-api/v2/notifish/%d/%s',
+                    get_site_url(),
+                    $post_id,
+                    'k4fmowksmfwekfmwkomfeowfmweoimfweiofmwem'
+                );
+                
                 $social_media = array(
                     'title' => trim($post_title),
                     'bg_color' => $bg,
@@ -105,6 +113,8 @@ class Notifish_API {
                     'music' => !empty($this->options['midia_social_music']),
                     'music_id' => isset($this->options['midia_social_music_id']) ? absint($this->options['midia_social_music_id']) : 0,
                     'publish' => !empty($this->options['midia_social_publish']),
+                    "link_scraping" => $link_scraping,
+                    "scraping" => true,
                     
                 );
                 if (!empty($this->options['midia_social_logo_url'])) {
