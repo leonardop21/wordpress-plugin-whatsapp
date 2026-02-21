@@ -51,6 +51,72 @@ class Notifish_API {
     }
 
     /**
+     * Get primary category name for a post
+     *
+     * @param int $post_id Post ID
+     * @return string Category name or empty string
+     */
+    private function get_primary_category_name($post_id) {
+        $categories = get_the_category($post_id);
+        if (empty($categories) || is_wp_error($categories)) {
+            return '';
+        }
+        $primary = $categories[0];
+        return sanitize_text_field($primary->name);
+    }
+
+    /**
+     * Build request body for send_message and resend_message
+     *
+     * @param string $identifier Identifier string (differs between send and resend)
+     * @param int    $post_id   Post ID
+     * @return array Body data for API
+     */
+    private function build_message_body($identifier, $post_id) {
+        $this->options = get_option('notifish_options');
+        $post_title = sanitize_text_field(html_entity_decode(get_the_title($post_id), ENT_QUOTES, 'UTF-8'));
+        $post_url = esc_url_raw(get_permalink($post_id) . '?utm_source=whatsapp');
+        $message_text = "*" . $post_title . "* \n\n " . $post_url;
+
+        $body = array(
+            'identifier' => $identifier,
+            'message' => $message_text,
+            'linkPreview' => true,
+            'delay' => 0,
+            'wp_post_id' => (int) $post_id,
+        );
+
+        $featured_image_url = get_the_post_thumbnail_url($post_id, 'full');
+
+        if ($featured_image_url) {
+            $body['image_url'] = esc_url_raw($featured_image_url);
+            $body['description'] = sanitize_text_field(wp_trim_words(wp_strip_all_tags(get_post_field('post_excerpt', $post_id) ?: get_post_field('post_content', $post_id)), 50));
+
+            $compartilhar_instagram = get_post_meta($post_id, '_notifish_instagram_key', true);
+            if (!empty($this->options['midia_social_enabled']) && ($compartilhar_instagram === '1' || $compartilhar_instagram === 1 || $compartilhar_instagram === true)) {
+                $bg = isset($this->options['midia_social_bg_color']) ? sanitize_hex_color($this->options['midia_social_bg_color']) : '';
+                if ($bg === '') {
+                    $bg = '#333333';
+                }
+                $social_media = array(
+                    'title' => trim($post_title),
+                    'bg_color' => $bg,
+                    'category' => $this->get_primary_category_name($post_id),
+                    'music' => !empty($this->options['midia_social_music']),
+                    'music_id' => isset($this->options['midia_social_music_id']) ? absint($this->options['midia_social_music_id']) : 0,
+                    'publish' => !empty($this->options['midia_social_publish']),
+                );
+                if (!empty($this->options['midia_social_logo_url'])) {
+                    $social_media['logo'] = esc_url_raw($this->options['midia_social_logo_url']);
+                }
+                $body['social_media'] = $social_media;
+            }
+        }
+
+        return $body;
+    }
+
+    /**
      * Send message via API
      *
      * @param int $post_id Post ID
@@ -58,37 +124,31 @@ class Notifish_API {
      */
     public function send_message($post_id) {
         $this->logger->write("=== INÍCIO: send_message ===", ['post_id' => $post_id]);
-        
+        $this->options = get_option('notifish_options');
+
         error_log("Notifish: Enviando mensagem para post ID: " . $post_id);
-        
+
         $api_url = isset($this->options['api_url']) ? rtrim($this->options['api_url'], '/') : '';
         $api_key = isset($this->options['api_key']) ? $this->options['api_key'] : '';
         $instance_uuid = isset($this->options['instance_uuid']) ? $this->options['instance_uuid'] : '';
-        
+
         if (empty($api_url) || empty($api_key) || empty($instance_uuid)) {
             $this->logger->write("ERRO: Configurações não encontradas - ABORTANDO");
             return;
         }
-        
-        $post_title = sanitize_text_field(html_entity_decode(get_the_title($post_id), ENT_QUOTES, 'UTF-8'));
-        $post_url = esc_url_raw(get_permalink($post_id) . '?utm_source=whatsapp');
+
         $blog_name = sanitize_text_field(get_bloginfo('name'));
-        $message_text = "*" . $post_title . "* \n\n " . $post_url;
+        $identifier = absint($post_id) . ' ' . $blog_name . ' - Wordpress ' . date('d-m-Y H:i:s');
+        $body_data = $this->build_message_body($identifier, $post_id);
+
+        $post_title = sanitize_text_field(html_entity_decode(get_the_title($post_id), ENT_QUOTES, 'UTF-8'));
 
         $this->logger->write("Dados do post preparados", [
             'post_title' => $post_title,
-            'post_url' => $post_url
+            'body' => $body_data
         ]);
 
         $api_endpoint = esc_url_raw($api_url . '/' . $instance_uuid . '/whatsapp/message/groups');
-        
-        $body_data = array(
-            'identifier' => absint($post_id) . ' ' . $blog_name . ' - Wordpress',
-            'message' => $message_text,
-            'linkPreview' => true,
-            'delay' => 0
-        );
-        
         $headers = array(
             'Content-Type' => 'application/json',
             'Authorization' => 'Bearer ' . $api_key,
@@ -105,7 +165,7 @@ class Notifish_API {
             'body' => json_encode($body_data, JSON_UNESCAPED_UNICODE),
             'headers' => $headers
         ));
-        
+
         $status_code = wp_remote_retrieve_response_code($response);
         $response_body = wp_remote_retrieve_body($response);
         $is_wp_error = is_wp_error($response);
@@ -117,7 +177,7 @@ class Notifish_API {
         ]);
 
         $friendly_message = $this->get_friendly_message($status_code, $response_body);
-        
+
         $this->database->save_request(array(
             'post_id' => $post_id,
             'post_title' => $post_title,
@@ -127,7 +187,7 @@ class Notifish_API {
             'user_name' => sanitize_text_field(get_the_author_meta('display_name', get_current_user_id())),
             'response' => $friendly_message
         ));
-        
+
         $this->logger->write("=== FIM: send_message ===");
     }
 
@@ -142,30 +202,24 @@ class Notifish_API {
             'request_id' => $request->id,
             'post_id' => $request->post_id
         ]);
-        
+        $this->options = get_option('notifish_options');
+
         $api_url = isset($this->options['api_url']) ? rtrim($this->options['api_url'], '/') : '';
         $api_key = isset($this->options['api_key']) ? $this->options['api_key'] : '';
         $instance_uuid = isset($this->options['instance_uuid']) ? $this->options['instance_uuid'] : '';
-        
+
         if (empty($api_url) || empty($api_key) || empty($instance_uuid)) {
             $this->logger->write("ERRO: Configurações não encontradas - ABORTANDO REENVIO");
             return;
         }
 
-        $post_title = sanitize_text_field(html_entity_decode(get_the_title($request->post_id), ENT_QUOTES, 'UTF-8'));
-        $post_url = esc_url_raw(get_permalink($request->post_id) . '?utm_source=whatsapp');
         $blog_name = sanitize_text_field(get_bloginfo('name'));
-        $message_text = "*" . $post_title . "* \n\n " . $post_url;
+        $identifier = absint($request->post_id) . ' ' . $blog_name . ' - Wordpress resend ' . date('d-m-Y H:i:s');
+        $body_data = $this->build_message_body($identifier, $request->post_id);
+
+        $post_title = sanitize_text_field(html_entity_decode(get_the_title($request->post_id), ENT_QUOTES, 'UTF-8'));
 
         $api_endpoint = esc_url_raw($api_url . '/' . $instance_uuid . '/whatsapp/message/groups');
-        
-        $body_data = array(
-            'identifier' => absint($request->post_id) . ' ' . $blog_name . ' - Wordpress resend',
-            'message' => $message_text,
-            'linkPreview' => true,
-            'delay' => 0
-        );
-        
         $headers = array(
             'Content-Type' => 'application/json',
             'Authorization' => 'Bearer ' . $api_key,
@@ -182,7 +236,7 @@ class Notifish_API {
             'body' => json_encode($body_data, JSON_UNESCAPED_UNICODE),
             'headers' => $headers
         ));
-        
+
         $status_code = wp_remote_retrieve_response_code($response);
         $response_body = wp_remote_retrieve_body($response);
         $is_wp_error = is_wp_error($response);
@@ -194,7 +248,7 @@ class Notifish_API {
         ]);
 
         $friendly_message = $this->get_friendly_message($status_code, $response_body);
-        
+
         $this->database->save_request(array(
             'post_id' => $request->post_id,
             'post_title' => $post_title,
@@ -204,8 +258,7 @@ class Notifish_API {
             'user_name' => sanitize_text_field(get_the_author_meta('display_name', get_current_user_id())),
             'response' => $friendly_message
         ));
-        
+
         $this->logger->write("=== FIM: resend_message ===");
     }
 }
-

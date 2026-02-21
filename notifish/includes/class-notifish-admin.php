@@ -109,6 +109,65 @@ class Notifish_Admin {
         if (isset($input['language'])) {
             $new_input['language'] = sanitize_text_field($input['language']);
         }
+        if (isset($input['midia_social_enabled'])) {
+            $new_input['midia_social_enabled'] = $input['midia_social_enabled'] === '1' ? '1' : '0';
+        }
+        if (isset($input['midia_social_logo_url'])) {
+            $new_input['midia_social_logo_url'] = esc_url_raw($input['midia_social_logo_url']);
+        }
+        if (isset($input['midia_social_bg_color'])) {
+            $color = sanitize_hex_color($input['midia_social_bg_color']);
+            $new_input['midia_social_bg_color'] = $color ? $color : '#333333';
+        }
+        if (isset($input['midia_social_music'])) {
+            $new_input['midia_social_music'] = $input['midia_social_music'] === '1' ? '1' : '0';
+        }
+        if (isset($input['midia_social_music_id'])) {
+            $new_input['midia_social_music_id'] = absint($input['midia_social_music_id']);
+        }
+        if (isset($input['midia_social_publish'])) {
+            $new_input['midia_social_publish'] = $input['midia_social_publish'] === '1' ? '1' : '0';
+        }
+
+        // Se Mídias sociais estiver habilitado, exige todos os campos preenchidos
+        if (!empty($new_input['midia_social_enabled']) && $new_input['midia_social_enabled'] === '1') {
+            $logo_url = isset($new_input['midia_social_logo_url']) ? trim($new_input['midia_social_logo_url']) : '';
+            $bg_color = isset($new_input['midia_social_bg_color']) ? $new_input['midia_social_bg_color'] : '';
+            $music = isset($new_input['midia_social_music']) ? $new_input['midia_social_music'] : '';
+            $music_id = isset($new_input['midia_social_music_id']) ? $new_input['midia_social_music_id'] : '';
+            $publish = isset($new_input['midia_social_publish']) ? $new_input['midia_social_publish'] : '';
+
+            $missing = array();
+            if (empty($logo_url) || !wp_http_validate_url($logo_url)) {
+                $missing[] = __('Logo', 'notifish');
+            }
+            if (empty($bg_color) || sanitize_hex_color($bg_color) === '') {
+                $missing[] = __('Cor de fundo', 'notifish');
+            }
+            if ($music === '') {
+                $missing[] = __('Inserir música no vídeo', 'notifish');
+            }
+            if (!array_key_exists('midia_social_music_id', $new_input)) {
+                $missing[] = __('ID da música', 'notifish');
+            }
+            if ($publish === '') {
+                $missing[] = __('Publicar nas mídias sociais', 'notifish');
+            }
+
+            if (!empty($missing)) {
+                add_settings_error(
+                    'notifish_group',
+                    'midia_social_required',
+                    sprintf(
+                        __('Quando "Habilitar Mídias sociais" está em Sim, é obrigatório preencher todos os campos: %s.', 'notifish'),
+                        implode(', ', $missing)
+                    ),
+                    'error'
+                );
+                $new_input['midia_social_enabled'] = '0';
+            }
+        }
+
         return $new_input;
     }
 
@@ -153,10 +212,23 @@ class Notifish_Admin {
         $is_checked = $already_sent ? false : ($default_enabled || ($value === '1' || $value === 1 || $value === true));
         $checked_attr = $is_checked ? 'checked="checked"' : '';
         
+        echo '<p style="margin-bottom: 12px;">';
         echo '<label for="notifish_send_notification_whatsapp">';
-        echo 'Deseja compartilhar no WhatsApp?';
-        echo '</label> ';
-        echo '<input type="checkbox" id="notifish_send_notification_whatsapp" name="notifish_send_notification_whatsapp" value="1" ' . $checked_attr . ' />';
+        echo '<input type="checkbox" id="notifish_send_notification_whatsapp" name="notifish_send_notification_whatsapp" value="1" ' . $checked_attr . ' /> ';
+        echo 'Compartilhar no WhatsApp';
+        echo '</label>';
+        echo '</p>';
+
+        $instagram_value = get_post_meta($post->ID, '_notifish_instagram_key', true);
+        $instagram_checked = ($instagram_value === '1' || $instagram_value === 1 || $instagram_value === true);
+        $instagram_attr = $instagram_checked ? 'checked="checked"' : '';
+        echo '<p style="margin-bottom: 0;">';
+        echo '<label for="notifish_send_notification_instagram">';
+        echo '<input type="checkbox" id="notifish_send_notification_instagram" name="notifish_send_notification_instagram" value="1" ' . $instagram_attr . ' /> ';
+        echo 'Compartilhar no Instagram';
+        echo '</label>';
+        echo '</p>';
+        echo '<p class="description" style="margin-top: 6px;">Se marcado e o post tiver imagem de destaque, será enviado o array para geração de story/reels no Notifish.</p>';
         
         if ($already_sent) {
             echo '<p style="color: red;">A matéria já foi compartilhada no WhatsApp. Para reenviar, use o menu "Notifish Logs".</p>';
@@ -198,6 +270,9 @@ class Notifish_Admin {
 
         $my_data = isset($_POST['notifish_send_notification_whatsapp']) ? sanitize_text_field(wp_unslash($_POST['notifish_send_notification_whatsapp'])) : '';
         update_post_meta($post_id, '_notifish_meta_value_key', $my_data);
+
+        $instagram_data = isset($_POST['notifish_send_notification_instagram']) ? '1' : '';
+        update_post_meta($post_id, '_notifish_instagram_key', $instagram_data);
 
         $status = get_post_status($post_id);
         

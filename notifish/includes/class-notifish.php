@@ -109,12 +109,15 @@ class Notifish {
         // Enqueue jQuery if not already enqueued
         wp_enqueue_script('jquery');
         
-        // Enqueue config page script
+        // Enqueue config page script and assets
         if ($hook === 'toplevel_page_notifish') {
+            wp_enqueue_media();
+            wp_enqueue_script('wp-color-picker');
+            wp_enqueue_style('wp-color-picker');
             wp_enqueue_script(
                 'notifish-config',
                 NOTIFISH_PLUGIN_URL . 'assets/js/config-page.js',
-                array('jquery'),
+                array('jquery', 'wp-color-picker'),
                 NOTIFISH_VERSION,
                 true
             );
@@ -123,7 +126,9 @@ class Notifish {
                 'notifishConfig',
                 array(
                     'ajaxurl' => admin_url('admin-ajax.php'),
-                    'nonce' => wp_create_nonce('notifish_dismiss_notice')
+                    'nonce' => wp_create_nonce('notifish_dismiss_notice'),
+                    'logoMaxKb' => 200,
+                    'logoAllowedTypes' => array('image/png', 'image/webp')
                 )
             );
         }
@@ -161,6 +166,16 @@ class Notifish {
      */
     public function register_post_meta_for_rest() {
         register_post_meta('post', '_notifish_meta_value_key', array(
+            'show_in_rest' => true,
+            'single' => true,
+            'type' => 'string',
+            'default' => '',
+            'auth_callback' => function() {
+                return current_user_can('edit_posts');
+            },
+            'sanitize_callback' => 'sanitize_text_field',
+        ));
+        register_post_meta('post', '_notifish_instagram_key', array(
             'show_in_rest' => true,
             'single' => true,
             'type' => 'string',
