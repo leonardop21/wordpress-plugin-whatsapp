@@ -78,6 +78,13 @@ $options = get_option('notifish_options');
                     </td>
                 </tr>
                 <tr valign="top">
+                    <th scope="row">Mensagem no rodapé</th>
+                    <td>
+                        <textarea id="whatsapp_footer_message" name="notifish_options[whatsapp_footer_message]" rows="4" class="large-text" placeholder="Ex: Acompanhe mais notícias em https://meusite.com"><?php echo isset($options['whatsapp_footer_message']) ? esc_textarea($options['whatsapp_footer_message']) : ''; ?></textarea>
+                        <p class="description">Texto opcional anexado ao final da mensagem (send e resend). Aceita múltiplas linhas.</p>
+                    </td>
+                </tr>
+                <tr valign="top">
                     <th scope="row">Habilitar WhatsApp por padrão</th>
                     <td>
                         <select name="notifish_options[default_whatsapp_enabled]">
@@ -85,6 +92,16 @@ $options = get_option('notifish_options');
                             <option value="1" <?php selected(isset($options['default_whatsapp_enabled']) ? $options['default_whatsapp_enabled'] : '', '1'); ?>>Sim</option>
                         </select>
                         <p class="description">Se "Sim", o checkbox de compartilhar no WhatsApp virá marcado por padrão ao criar novos posts.</p>
+                    </td>
+                </tr>
+                <tr valign="top">
+                    <th scope="row">Habilitar Instagram por padrão</th>
+                    <td>
+                        <select name="notifish_options[default_instagram_enabled]">
+                            <option value="0" <?php selected(isset($options['default_instagram_enabled']) ? $options['default_instagram_enabled'] : '', '0'); ?>>Não</option>
+                            <option value="1" <?php selected(isset($options['default_instagram_enabled']) ? $options['default_instagram_enabled'] : '', '1'); ?>>Sim</option>
+                        </select>
+                        <p class="description">Se "Sim", o checkbox de compartilhar no Instagram virá marcado por padrão ao criar novos posts.</p>
                     </td>
                 </tr>
                 <tr valign="top">

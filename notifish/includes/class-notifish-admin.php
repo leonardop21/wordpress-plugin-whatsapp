@@ -97,8 +97,18 @@ class Notifish_Admin {
         if (isset($input['instance_uuid'])) {
             $new_input['instance_uuid'] = sanitize_text_field($input['instance_uuid']);
         }
+        if (isset($input['whatsapp_footer_message'])) {
+            $new_input['whatsapp_footer_message'] = sanitize_textarea_field($input['whatsapp_footer_message']);
+        } else {
+            if (isset($current_options['whatsapp_footer_message']) && $current_options['whatsapp_footer_message'] !== '') {
+                $new_input['whatsapp_footer_message'] = $current_options['whatsapp_footer_message'];
+            }
+        }
         if (isset($input['default_whatsapp_enabled'])) {
             $new_input['default_whatsapp_enabled'] = sanitize_text_field($input['default_whatsapp_enabled']);
+        }
+        if (isset($input['default_instagram_enabled'])) {
+            $new_input['default_instagram_enabled'] = sanitize_text_field($input['default_instagram_enabled']);
         }
         if (isset($input['enable_logging'])) {
             $new_input['enable_logging'] = sanitize_text_field($input['enable_logging']);
@@ -220,7 +230,13 @@ class Notifish_Admin {
         echo '</p>';
 
         $instagram_value = get_post_meta($post->ID, '_notifish_instagram_key', true);
-        $instagram_checked = ($instagram_value === '1' || $instagram_value === 1 || $instagram_value === true);
+        $instagram_has_no_value = empty($instagram_value);
+        $default_instagram_enabled = false;
+        if ($is_new_post || $instagram_has_no_value) {
+            $options_insta = get_option('notifish_options');
+            $default_instagram_enabled = isset($options_insta['default_instagram_enabled']) && $options_insta['default_instagram_enabled'] == '1';
+        }
+        $instagram_checked = $default_instagram_enabled || ($instagram_value === '1' || $instagram_value === 1 || $instagram_value === true);
         $instagram_attr = $instagram_checked ? 'checked="checked"' : '';
         echo '<p style="margin-bottom: 0;">';
         echo '<label for="notifish_send_notification_instagram">';

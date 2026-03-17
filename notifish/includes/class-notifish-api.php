@@ -78,6 +78,13 @@ class Notifish_API {
         $post_url = esc_url_raw(get_permalink($post_id) . '?utm_source=whatsapp');
         $message_text = "*" . $post_title . "* \n\n " . $post_url;
 
+        // Mensagem de rodapé opcional configurada no admin
+        $footer = isset($this->options['whatsapp_footer_message']) ? sanitize_textarea_field($this->options['whatsapp_footer_message']) : '';
+        $footer = trim($footer);
+        if ($footer !== '') {
+            $message_text .= "\n\n" . $footer;
+        }
+
         $body = array(
             'identifier' => $identifier,
             'message' => $message_text,
@@ -99,11 +106,12 @@ class Notifish_API {
                     $bg = '#333333';
                 }
 
+                $instance_uuid = isset($this->options['instance_uuid']) ? (string) $this->options['instance_uuid'] : '';
                 $link_scraping = sprintf(
-                    '%s/wp-json/wp-api/v2/notifish/%d/%s',
+                    '%s/wp-json/notifish/v1/post/%d/%s',
                     get_site_url(),
                     $post_id,
-                    'k4fmowksmfwekfmwkomfeowfmweoimfweiofmwem'
+                    $instance_uuid
                 );
                 
                 $social_media = array(

@@ -284,16 +284,21 @@ class Notifish {
 
         // Se está criando um novo post, aplica o valor padrão das configurações
         if ($creating) {
+            $options = get_option('notifish_options');
             $existing_meta = get_post_meta($post->ID, '_notifish_meta_value_key', true);
-            
-            // Se não foi definido um valor pelo app, usa o padrão das configurações
             if (empty($existing_meta)) {
-                $options = get_option('notifish_options');
                 $default_enabled = isset($options['default_whatsapp_enabled']) && $options['default_whatsapp_enabled'] == '1';
-                
                 if ($default_enabled) {
                     update_post_meta($post->ID, '_notifish_meta_value_key', '1');
                     $this->logger->write("REST API: Valor padrão aplicado (habilitado)", ['post_id' => $post->ID]);
+                }
+            }
+            $existing_instagram = get_post_meta($post->ID, '_notifish_instagram_key', true);
+            if (empty($existing_instagram)) {
+                $default_instagram = isset($options['default_instagram_enabled']) && $options['default_instagram_enabled'] == '1';
+                if ($default_instagram) {
+                    update_post_meta($post->ID, '_notifish_instagram_key', '1');
+                    $this->logger->write("REST API: Instagram padrão aplicado (habilitado)", ['post_id' => $post->ID]);
                 }
             }
         }
@@ -359,16 +364,23 @@ class Notifish {
         }
 
         $notifish_enabled = get_post_meta($post->ID, '_notifish_meta_value_key', true);
-        
+        $options = get_option('notifish_options');
+
         // Se não tem valor definido, verifica o padrão das configurações
         if (empty($notifish_enabled)) {
-            $options = get_option('notifish_options');
             $default_enabled = isset($options['default_whatsapp_enabled']) && $options['default_whatsapp_enabled'] == '1';
-            
             if ($default_enabled) {
                 $notifish_enabled = '1';
                 update_post_meta($post->ID, '_notifish_meta_value_key', '1');
                 $this->logger->write("TRANSITION: Valor padrão aplicado (habilitado)", ['post_id' => $post->ID]);
+            }
+        }
+        $instagram_meta = get_post_meta($post->ID, '_notifish_instagram_key', true);
+        if (empty($instagram_meta)) {
+            $default_instagram = isset($options['default_instagram_enabled']) && $options['default_instagram_enabled'] == '1';
+            if ($default_instagram) {
+                update_post_meta($post->ID, '_notifish_instagram_key', '1');
+                $this->logger->write("TRANSITION: Instagram padrão aplicado (habilitado)", ['post_id' => $post->ID]);
             }
         }
 
@@ -397,18 +409,25 @@ class Notifish {
         
         // O transition_post_status já deve ter tratado, mas garantimos aqui também
         $notifish_enabled = get_post_meta($post_id, '_notifish_meta_value_key', true);
-        
+        $options = get_option('notifish_options');
+
         if (empty($notifish_enabled)) {
-            $options = get_option('notifish_options');
             $default_enabled = isset($options['default_whatsapp_enabled']) && $options['default_whatsapp_enabled'] == '1';
-            
             if ($default_enabled) {
                 update_post_meta($post_id, '_notifish_meta_value_key', '1');
                 $notifish_enabled = '1';
                 $this->logger->write("XML-RPC: Valor padrão aplicado", ['post_id' => $post_id]);
             }
         }
-        
+        $instagram_meta = get_post_meta($post_id, '_notifish_instagram_key', true);
+        if (empty($instagram_meta)) {
+            $default_instagram = isset($options['default_instagram_enabled']) && $options['default_instagram_enabled'] == '1';
+            if ($default_instagram) {
+                update_post_meta($post_id, '_notifish_instagram_key', '1');
+                $this->logger->write("XML-RPC: Instagram padrão aplicado", ['post_id' => $post_id]);
+            }
+        }
+
         if ($notifish_enabled == '1' && !$this->database->post_was_sent($post_id)) {
             $this->logger->write("XML-RPC: Disparando envio", ['post_id' => $post_id]);
             do_action('notifish_send_message', $post_id);
